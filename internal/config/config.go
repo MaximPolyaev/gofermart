@@ -12,7 +12,7 @@ import (
 
 const (
 	defaultRunAddress           = "localhost:8081"
-	defaultDatabaseURI          = "host=localhost port=54333 user=admin password=password dbname=gofermart sslmode=disable"
+	defaultDatabaseURI          = "host=localhost port=5433 user=admin password=password dbname=gofermart sslmode=disable"
 	defaultAccrualSystemAddress = "localhost:8082"
 )
 
