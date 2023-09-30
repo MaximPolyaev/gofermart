@@ -12,7 +12,7 @@ import (
 
 const (
 	defaultRunAddress           = "localhost:8081"
-	defaultDatabaseUri          = "host=localhost port=54333 user=admin password=password dbname=gofermart sslmode=disable"
+	defaultDatabaseURI          = "host=localhost port=54333 user=admin password=password dbname=gofermart sslmode=disable"
 	defaultAccrualSystemAddress = "localhost:8082"
 )
 
@@ -83,14 +83,14 @@ func (c *Config) getFileNames() ([]string, error) {
 func (c *Config) parseFlags() error {
 	runAddr := flag.String("a", defaultRunAddress, "run address")
 	accrualAddr := flag.String("r", defaultAccrualSystemAddress, "accrual system address")
-	databaseUri := flag.String("d", defaultDatabaseUri, "database uri")
+	databaseURI := flag.String("d", defaultDatabaseURI, "database uri")
 
 	if c.RunAddress == nil {
 		c.RunAddress = runAddr
 	}
 
 	if c.DatabaseURI == nil {
-		c.DatabaseURI = databaseUri
+		c.DatabaseURI = databaseURI
 	}
 
 	if c.AccrualSystemAddress == nil {
