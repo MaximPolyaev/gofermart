@@ -1,9 +1,10 @@
 package main
 
 import (
-	"fmt"
 	"log"
 
+	"github.com/MaximPolyaev/gofermart/internal/adapters/http"
+	"github.com/MaximPolyaev/gofermart/internal/adapters/router"
 	"github.com/MaximPolyaev/gofermart/internal/config"
 	"github.com/MaximPolyaev/gofermart/internal/dbconn"
 )
@@ -14,10 +15,17 @@ func main() {
 		log.Fatal(err)
 	}
 
-	db, err := dbconn.InitDB(*cfg.DatabaseURI)
+	_, err := dbconn.InitDB(*cfg.DatabaseURI)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	fmt.Println(db)
+	server := http.New(*cfg.RunAddress)
+
+	rtr := router.New()
+	rtr.Configure()
+
+	if err := server.ListenAndServe(rtr.Mux); err != nil {
+		log.Fatal(err)
+	}
 }
