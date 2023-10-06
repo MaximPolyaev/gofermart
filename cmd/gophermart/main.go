@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/MaximPolyaev/gofermart/internal/usecases/authusecase"
 	"log"
 
 	"github.com/MaximPolyaev/gofermart/internal/adapters/http"
@@ -22,7 +23,9 @@ func main() {
 
 	server := http.New(*cfg.RunAddress)
 
-	rtr := router.New()
+	auth := authusecase.New()
+
+	rtr := router.New(auth)
 	rtr.Configure()
 
 	if err := server.ListenAndServe(rtr.Mux); err != nil {

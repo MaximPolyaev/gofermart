@@ -10,8 +10,8 @@ import (
 )
 
 type AuthUseCase interface {
-	signIn(ctx context.Context, payload entities.AuthPayload) (string, error)
-	signUp(ctx context.Context, payload entities.AuthPayload) (string, error)
+	SignIn(ctx context.Context, payload entities.AuthPayload) (string, error)
+	SignUp(ctx context.Context, payload entities.AuthPayload) (string, error)
 }
 
 func (r *Router) login() http.HandlerFunc {
