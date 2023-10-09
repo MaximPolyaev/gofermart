@@ -1,13 +1,14 @@
 package main
 
 import (
-	"github.com/MaximPolyaev/gofermart/internal/usecases/authusecase"
 	"log"
 
 	"github.com/MaximPolyaev/gofermart/internal/adapters/http"
 	"github.com/MaximPolyaev/gofermart/internal/adapters/router"
+	"github.com/MaximPolyaev/gofermart/internal/adapters/storage"
 	"github.com/MaximPolyaev/gofermart/internal/config"
 	"github.com/MaximPolyaev/gofermart/internal/dbconn"
+	"github.com/MaximPolyaev/gofermart/internal/usecases/authusecase"
 )
 
 func main() {
@@ -16,14 +17,16 @@ func main() {
 		log.Fatal(err)
 	}
 
-	_, err := dbconn.InitDB(*cfg.DatabaseURI)
+	db, err := dbconn.InitDB(*cfg.DatabaseURI)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	server := http.New(*cfg.RunAddress)
 
-	auth := authusecase.New()
+	store := storage.New(db)
+
+	auth := authusecase.New(store)
 
 	rtr := router.New(auth)
 	rtr.Configure()
