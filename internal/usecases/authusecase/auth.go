@@ -15,6 +15,7 @@ func New() *AuthUseCase {
 func (a *AuthUseCase) SignIn(ctx context.Context, payload entities.AuthPayload) (string, error) {
 	return "", nil
 }
+
 func (a *AuthUseCase) SignUp(ctx context.Context, payload entities.AuthPayload) (string, error) {
 	return "", nil
 }
