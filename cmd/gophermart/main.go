@@ -1,9 +1,10 @@
 package main
 
 import (
+	"fmt"
 	"log"
+	"net/http"
 
-	"github.com/MaximPolyaev/gofermart/internal/adapters/http"
 	"github.com/MaximPolyaev/gofermart/internal/adapters/router"
 	"github.com/MaximPolyaev/gofermart/internal/adapters/storage"
 	"github.com/MaximPolyaev/gofermart/internal/config"
@@ -27,8 +28,6 @@ func main() {
 		log.Fatal(err)
 	}
 
-	server := http.New(*cfg.RunAddress)
-
 	store := storage.New(db)
 
 	auth := authusecase.New(store)
@@ -36,7 +35,8 @@ func main() {
 	rtr := router.New(auth)
 	rtr.Configure()
 
-	if err := server.ListenAndServe(rtr.Mux); err != nil {
+	fmt.Println("start server on", *cfg.RunAddress)
+	if err := http.ListenAndServe(*cfg.RunAddress, rtr); err != nil {
 		log.Fatal(err)
 	}
 }

@@ -25,7 +25,7 @@ func (r *Router) Configure() {
 	r.Use(middleware.Compress(gzip.BestCompression))
 
 	r.Post("/api/user/login", r.login())
-	r.Post("/api/user/registration", r.registration())
+	r.Post("/api/user/register", r.register())
 	r.Post("/api/user/orders", r.postOrders())
 	r.Get("/api/user/orders", r.getOrders())
 	r.Get("/api/user/balance", r.balance())

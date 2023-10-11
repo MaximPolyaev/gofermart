@@ -58,7 +58,7 @@ func (r *Router) login() http.HandlerFunc {
 	}
 }
 
-func (r *Router) registration() http.HandlerFunc {
+func (r *Router) register() http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 
