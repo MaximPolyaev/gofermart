@@ -7,17 +7,17 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-type Http struct {
+type Server struct {
 	runAddr string
 }
 
-func New(runAddr string) *Http {
-	return &Http{
+func New(runAddr string) *Server {
+	return &Server{
 		runAddr: runAddr,
 	}
 }
 
-func (a *Http) ListenAndServe(router *chi.Mux) error {
+func (a *Server) ListenAndServe(router *chi.Mux) error {
 	fmt.Println("start server on", a.runAddr)
 	return http.ListenAndServe(a.runAddr, router)
 }
