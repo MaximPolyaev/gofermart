@@ -48,7 +48,7 @@ func (a *AuthUseCase) SignIn(ctx context.Context, payload entities.AuthPayload) 
 		return "", errors.New("incorrect login or password")
 	}
 
-	if a.hashPassword(payload.Login) != user.HashPassword {
+	if a.hashPassword(payload.Password) != user.HashPassword {
 		return "", errors.New("incorrect login or password")
 	}
 
