@@ -8,6 +8,7 @@ import (
 	"github.com/MaximPolyaev/gofermart/internal/adapters/storage"
 	"github.com/MaximPolyaev/gofermart/internal/config"
 	"github.com/MaximPolyaev/gofermart/internal/dbconn"
+	"github.com/MaximPolyaev/gofermart/internal/migration"
 	"github.com/MaximPolyaev/gofermart/internal/usecases/authusecase"
 )
 
@@ -19,6 +20,10 @@ func main() {
 
 	db, err := dbconn.InitDB(*cfg.DatabaseURI)
 	if err != nil {
+		log.Fatal(err)
+	}
+
+	if err := migration.MigrateUp(db); err != nil {
 		log.Fatal(err)
 	}
 
