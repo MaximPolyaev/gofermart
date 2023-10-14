@@ -27,7 +27,7 @@ func BuildToken(login string) (string, error) {
 	return token.SignedString([]byte(secretKey))
 }
 
-func ParseClaims(tokenString string) (*Claims, error) {
+func ValidateToken(tokenString string) error {
 	var claims Claims
 
 	token, err := jwt.ParseWithClaims(tokenString, &claims, func(t *jwt.Token) (interface{}, error) {
@@ -39,12 +39,12 @@ func ParseClaims(tokenString string) (*Claims, error) {
 	})
 
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	if !token.Valid {
-		return nil, errors.New("token is nov valid")
+		return errors.New("token is nov valid")
 	}
 
-	return &claims, nil
+	return nil
 }

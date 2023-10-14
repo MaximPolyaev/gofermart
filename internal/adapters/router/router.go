@@ -20,9 +20,12 @@ func New(auth AuthUseCase) *Router {
 }
 
 func (r *Router) Configure() {
-	r.Use(middleware.Logger)
-	r.Use(middleware.StripSlashes)
-	r.Use(middleware.Compress(gzip.BestCompression))
+	r.Use(
+		middleware.Logger,
+		middleware.StripSlashes,
+		r.authMiddleware,
+		middleware.Compress(gzip.BestCompression),
+	)
 
 	r.Post("/api/user/login", r.login())
 	r.Post("/api/user/register", r.register())

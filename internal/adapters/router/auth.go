@@ -7,6 +7,8 @@ import (
 	"net/http"
 
 	"github.com/MaximPolyaev/gofermart/internal/entities"
+	"github.com/MaximPolyaev/gofermart/internal/utils/jwt"
+	"github.com/go-chi/chi/v5"
 )
 
 type AuthUseCase interface {
@@ -99,4 +101,41 @@ func (r *Router) register() http.HandlerFunc {
 
 		w.WriteHeader(http.StatusOK)
 	}
+}
+
+func (r *Router) authMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		if r.isNeedCheckAuth(req) && !r.isAuthenticated(req) {
+			http.Error(w, "no authorized", http.StatusUnauthorized)
+			return
+		}
+
+		next.ServeHTTP(w, req)
+	})
+}
+
+func (r *Router) isNeedCheckAuth(req *http.Request) bool {
+	routePath := req.URL.Path
+
+	rctx := chi.RouteContext(req.Context())
+
+	if rctx.RoutePath != "" {
+		routePath = rctx.RoutePath
+	}
+
+	return routePath != "/api/user/login" && routePath != "/api/user/register"
+}
+
+func (r *Router) isAuthenticated(req *http.Request) bool {
+	token := r.getToken(req)
+
+	if token == "" {
+		return false
+	}
+
+	if err := jwt.ValidateToken(token); err != nil {
+		return false
+	}
+
+	return true
 }

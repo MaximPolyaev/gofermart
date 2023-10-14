@@ -24,16 +24,12 @@ func TestParseClaims(t *testing.T) {
 	tests := []struct {
 		name    string
 		args    args
-		want    *Claims
 		wantErr bool
 	}{
 		{
 			name: "test case #1",
 			args: args{
 				tokenString: validToken,
-			},
-			want: &Claims{
-				UserLogin: login,
 			},
 		},
 		{
@@ -43,14 +39,13 @@ func TestParseClaims(t *testing.T) {
 					".eyJleHAiOjE2OTY4MzkzMzQsIlVzZXJMb2dpbiI6InRlc3QifQ" +
 					".7_fW3fcHTWzMz93rXuqQTORNOXrru38Eb9tjnGLOuBE",
 			},
-			want:    nil,
 			wantErr: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := ParseClaims(tt.args.tokenString)
+			err := ValidateToken(tt.args.tokenString)
 
 			if tt.wantErr {
 				assert.Error(t, err)
@@ -58,7 +53,6 @@ func TestParseClaims(t *testing.T) {
 			}
 
 			assert.NoError(t, err)
-			assert.Equalf(t, tt.want.UserLogin, got.UserLogin, "ParseClaims(%v)", tt.args.tokenString)
 		})
 	}
 }
