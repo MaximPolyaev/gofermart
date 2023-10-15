@@ -4,13 +4,12 @@ import (
 	"context"
 	"io"
 	"net/http"
-	"strconv"
 )
 
 type ordersUseCase interface {
-	ValidateLuhn(number int64) bool
-	GetUserID(ctx context.Context, number int64) (int, error)
-	CreateOrder(ctx context.Context, number int64, userID int) error
+	ValidateNumber(number string) error
+	GetUserID(ctx context.Context, number string) (int, error)
+	CreateOrder(ctx context.Context, number string, userID int) error
 }
 
 func (r *Router) postOrders() http.HandlerFunc {
@@ -23,14 +22,18 @@ func (r *Router) postOrders() http.HandlerFunc {
 			return
 		}
 
-		number, err := r.getOrderNumberFromReq(req)
+		data, err := io.ReadAll(req.Body)
+		defer func(Body io.ReadCloser) {
+			_ = Body.Close()
+		}(req.Body)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
+		number := string(data)
 
-		if !r.orders.ValidateLuhn(number) {
-			http.Error(w, "incorrect number format", http.StatusUnprocessableEntity)
+		if err := r.orders.ValidateNumber(number); err != nil {
+			http.Error(w, err.Error(), http.StatusUnprocessableEntity)
 			return
 		}
 
@@ -72,22 +75,4 @@ func (r *Router) getOrders() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 	}
-}
-
-func (r *Router) getOrderNumberFromReq(req *http.Request) (int64, error) {
-	data, err := io.ReadAll(req.Body)
-	defer func(Body io.ReadCloser) {
-		_ = Body.Close()
-	}(req.Body)
-
-	if err != nil {
-		return 0, err
-	}
-
-	number, err := strconv.ParseInt(string(data), 10, 64)
-	if err != nil {
-		return 0, err
-	}
-
-	return number, nil
 }
