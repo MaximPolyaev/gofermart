@@ -10,7 +10,7 @@ type BalanceUseCase struct {
 }
 
 type storage interface {
-	FindBalanceByUserId(ctx context.Context, userID int) (*entities.UserBalance, error)
+	FindBalanceByUserID(ctx context.Context, userID int) (*entities.UserBalance, error)
 }
 
 func New(storage storage) *BalanceUseCase {
@@ -18,5 +18,5 @@ func New(storage storage) *BalanceUseCase {
 }
 
 func (uc *BalanceUseCase) GetBalance(ctx context.Context, userID int) (*entities.UserBalance, error) {
-	return uc.storage.FindBalanceByUserId(ctx, userID)
+	return uc.storage.FindBalanceByUserID(ctx, userID)
 }

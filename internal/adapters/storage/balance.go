@@ -8,7 +8,7 @@ import (
 	"github.com/MaximPolyaev/gofermart/internal/entities"
 )
 
-func (s *Storage) FindBalanceByUserId(ctx context.Context, userID int) (*entities.UserBalance, error) {
+func (s *Storage) FindBalanceByUserID(ctx context.Context, userID int) (*entities.UserBalance, error) {
 	var balance entities.UserBalance
 
 	q := `

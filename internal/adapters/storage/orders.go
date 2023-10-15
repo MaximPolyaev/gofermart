@@ -49,9 +49,7 @@ ORDER BY t.created_at
 `
 
 	rows, err := s.db.QueryContext(ctx, q, userID)
-	defer func() {
-		_ = rows.Close()
-	}()
+	defer rows.Close()
 	if err != nil {
 		return nil, err
 	}
