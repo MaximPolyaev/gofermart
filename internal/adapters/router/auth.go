@@ -16,6 +16,12 @@ type authUseCase interface {
 	SignUp(ctx context.Context, payload entities.AuthPayload) (string, error)
 }
 
+func WithAuthUseCase(auth authUseCase) func(r *Router) {
+	return func(r *Router) {
+		r.auth = auth
+	}
+}
+
 func (r *Router) login() http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Set("Content-Type", "application/json")

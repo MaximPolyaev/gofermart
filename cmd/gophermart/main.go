@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/MaximPolyaev/gofermart/internal/usecases/balanceusecase"
 	"log"
 	"net/http"
 
@@ -11,7 +12,7 @@ import (
 	"github.com/MaximPolyaev/gofermart/internal/dbconn"
 	"github.com/MaximPolyaev/gofermart/internal/usecases/authusecase"
 	"github.com/MaximPolyaev/gofermart/internal/usecases/ordersusecase"
-	"github.com/MaximPolyaev/gofermart/internal/usecases/userusercase"
+	"github.com/MaximPolyaev/gofermart/internal/usecases/userusecase"
 )
 
 func main() {
@@ -30,7 +31,8 @@ func main() {
 	rtr := router.New(
 		router.WithAuthUseCase(authusecase.New(store)),
 		router.WithOrdersUseCase(ordersusecase.New(store)),
-		router.WithUserUseCase(userusercase.New(store)),
+		router.WithUserUseCase(userusecase.New(store)),
+		router.WithBalanceUseCase(balanceusecase.New(store)),
 	)
 
 	rtr.Configure()

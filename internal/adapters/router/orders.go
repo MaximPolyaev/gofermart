@@ -16,6 +16,12 @@ type ordersUseCase interface {
 	GetOrders(ctx context.Context, userID int) ([]entities.Order, error)
 }
 
+func WithOrdersUseCase(orders ordersUseCase) func(r *Router) {
+	return func(r *Router) {
+		r.orders = orders
+	}
+}
+
 func (r *Router) postOrders() http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Set("Content-Type", "text/plain")

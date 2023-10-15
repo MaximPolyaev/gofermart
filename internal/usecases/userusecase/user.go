@@ -1,4 +1,4 @@
-package userusercase
+package userusecase
 
 import "context"
 
