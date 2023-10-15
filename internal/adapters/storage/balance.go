@@ -18,13 +18,24 @@ JOIN doc_order o ON o.id = t.order_id
 WHERE o.user_id = $1
 `
 
-	err := s.db.QueryRowContext(ctx, q, userID).Scan(&balance.Current, &balance.Withdrawn)
+	var current sql.NullFloat64
+	var withdrawn sql.NullFloat64
+
+	err := s.db.QueryRowContext(ctx, q, userID).Scan(&current, &withdrawn)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return &balance, nil
 		}
 
 		return &balance, err
+	}
+
+	if current.Valid {
+		balance.Current = current.Float64
+	}
+
+	if withdrawn.Valid {
+		balance.Withdrawn = withdrawn.Float64
 	}
 
 	return &balance, nil
