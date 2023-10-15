@@ -7,13 +7,13 @@ type UserUseCase struct {
 }
 
 type storage interface {
-	FindUserIdByLogin(ctx context.Context, login string) (int, error)
+	FindUserIDByLogin(ctx context.Context, login string) (int, error)
 }
 
 func New(storage storage) *UserUseCase {
 	return &UserUseCase{storage: storage}
 }
 
-func (uc *UserUseCase) GetUserIdByLogin(ctx context.Context, login string) (int, error) {
-	return uc.storage.FindUserIdByLogin(ctx, login)
+func (uc *UserUseCase) GetUserIDByLogin(ctx context.Context, login string) (int, error) {
+	return uc.storage.FindUserIDByLogin(ctx, login)
 }

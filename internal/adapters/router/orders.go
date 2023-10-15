@@ -9,7 +9,7 @@ import (
 
 type ordersUseCase interface {
 	ValidateLuhn(number int) bool
-	GetUserId(ctx context.Context, number int) (int, error)
+	GetUserID(ctx context.Context, number int) (int, error)
 	CreateOrder(ctx context.Context, number int, userId int) error
 }
 
@@ -36,13 +36,13 @@ func (r *Router) postOrders() http.HandlerFunc {
 
 		rctx := req.Context()
 
-		userId, err := r.getUserIdFromReq(req)
+		userId, err := r.getUserIDFromReq(req)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusUnauthorized)
 			return
 		}
 
-		userIdByExistOrder, err := r.orders.GetUserId(rctx, number)
+		userIdByExistOrder, err := r.orders.GetUserID(rctx, number)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return

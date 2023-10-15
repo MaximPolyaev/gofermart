@@ -7,7 +7,7 @@ type OrdersUseCase struct {
 }
 
 type storage interface {
-	FindUserIdByOrderNumber(ctx context.Context, number int) (int, error)
+	FindUserIDByOrderNumber(ctx context.Context, number int) (int, error)
 	CreateOrder(ctx context.Context, number int, userId int) error
 }
 
@@ -15,8 +15,8 @@ func New(storage storage) *OrdersUseCase {
 	return &OrdersUseCase{storage: storage}
 }
 
-func (us *OrdersUseCase) GetUserId(ctx context.Context, number int) (int, error) {
-	return us.storage.FindUserIdByOrderNumber(ctx, number)
+func (us *OrdersUseCase) GetUserID(ctx context.Context, number int) (int, error) {
+	return us.storage.FindUserIDByOrderNumber(ctx, number)
 }
 
 func (us *OrdersUseCase) CreateOrder(ctx context.Context, number int, userId int) error {

@@ -6,7 +6,7 @@ import (
 	"errors"
 )
 
-func (s *Storage) FindUserIdByOrderNumber(ctx context.Context, number int) (int, error) {
+func (s *Storage) FindUserIDByOrderNumber(ctx context.Context, number int) (int, error) {
 	var userId int
 
 	q := `SELECT user_id FROM doc_order WHERE number = $1 LIMIT 1`

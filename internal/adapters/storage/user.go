@@ -6,7 +6,7 @@ import (
 	"errors"
 )
 
-func (s *Storage) FindUserIdByLogin(ctx context.Context, login string) (int, error) {
+func (s *Storage) FindUserIDByLogin(ctx context.Context, login string) (int, error) {
 	var id int
 
 	q := `SELECT id FROM ref_user WHERE login = $1 LIMIT 1`
