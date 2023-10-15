@@ -35,6 +35,10 @@ func (us *OrdersUseCase) GetOrders(ctx context.Context, userID int) ([]entities.
 }
 
 func (us *OrdersUseCase) ValidateNumber(number string) error {
+	if number == "" {
+		return errors.New("empty number")
+	}
+
 	sum, err := us.getLuhnSum(number)
 	if err != nil {
 		return err

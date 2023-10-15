@@ -87,3 +87,16 @@ ORDER BY t.created_at
 
 	return orders, nil
 }
+
+func (s *Storage) FindOrderIDByNumber(ctx context.Context, number string) (int, error) {
+	var id int
+
+	q := `SELECT id FROM doc_order WHERE number = $1 LIMIT 1`
+
+	err := s.db.QueryRowContext(ctx, q, number).Scan(&id)
+	if err != nil {
+		return 0, err
+	}
+
+	return id, nil
+}

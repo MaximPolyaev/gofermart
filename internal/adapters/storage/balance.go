@@ -40,3 +40,36 @@ WHERE o.user_id = $1
 
 	return &balance, nil
 }
+
+func (s *Storage) FindBalanceByOrderNumber(ctx context.Context, number string) (float64, error) {
+	q := `
+SELECT sum(t.points) 
+FROM reg_points_balance t 
+JOIN doc_order o ON o.id = t.order_id
+WHERE o.number = $1
+    `
+
+	var points sql.NullFloat64
+
+	err := s.db.QueryRowContext(ctx, q, number).Scan(&points)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return 0, nil
+		}
+
+		return 0, err
+	}
+
+	return points.Float64, nil
+}
+
+func (s *Storage) CreatePointsOperation(ctx context.Context, orderID int, points float64) error {
+	q := `INSERT INTO reg_points_balance (order_id, points) VALUES ($1, $2)`
+
+	_, err := s.db.ExecContext(ctx, q, orderID, points)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
