@@ -23,10 +23,10 @@ func (s *Storage) FindUserIDByOrderNumber(ctx context.Context, number int) (int,
 	return userID, nil
 }
 
-func (s *Storage) CreateOrder(ctx context.Context, number int, userId int) error {
+func (s *Storage) CreateOrder(ctx context.Context, number int, userID int) error {
 	q := `INSERT INTO doc_order (number, user_id) VALUES ($1, $2)`
 
-	_, err := s.db.ExecContext(ctx, q, number, userId)
+	_, err := s.db.ExecContext(ctx, q, number, userID)
 
 	return err
 }

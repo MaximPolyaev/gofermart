@@ -42,14 +42,14 @@ func (r *Router) postOrders() http.HandlerFunc {
 			return
 		}
 
-		userIdByExistOrder, err := r.orders.GetUserID(rctx, number)
+		userIDByExistOrder, err := r.orders.GetUserID(rctx, number)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
-		if userIdByExistOrder != 0 {
-			if userIdByExistOrder == userID {
+		if userIDByExistOrder != 0 {
+			if userIDByExistOrder == userID {
 				w.WriteHeader(http.StatusOK)
 				return
 			}
