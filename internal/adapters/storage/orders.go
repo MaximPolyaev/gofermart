@@ -35,7 +35,7 @@ func (s *Storage) CreateOrder(ctx context.Context, number string, userID int) er
 	return err
 }
 
-func (s *Storage) FindOrdersByUserId(ctx context.Context, userID int) ([]entities.Order, error) {
+func (s *Storage) FindOrdersByUserID(ctx context.Context, userID int) ([]entities.Order, error) {
 	q := `
 SELECT t.number, t.status, t.created_at, coalesce(b.points, 0) as points
 FROM doc_order t
