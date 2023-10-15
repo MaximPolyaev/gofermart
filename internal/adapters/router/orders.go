@@ -8,9 +8,9 @@ import (
 )
 
 type ordersUseCase interface {
-	ValidateLuhn(number int) bool
-	GetUserID(ctx context.Context, number int) (int, error)
-	CreateOrder(ctx context.Context, number int, userID int) error
+	ValidateLuhn(number int64) bool
+	GetUserID(ctx context.Context, number int64) (int, error)
+	CreateOrder(ctx context.Context, number int64, userID int) error
 }
 
 func (r *Router) postOrders() http.HandlerFunc {
@@ -23,7 +23,7 @@ func (r *Router) postOrders() http.HandlerFunc {
 			return
 		}
 
-		number, err := r.getOrderNumber(req)
+		number, err := r.getOrderNumberFromReq(req)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
@@ -74,7 +74,7 @@ func (r *Router) getOrders() http.HandlerFunc {
 	}
 }
 
-func (r *Router) getOrderNumber(req *http.Request) (int, error) {
+func (r *Router) getOrderNumberFromReq(req *http.Request) (int64, error) {
 	data, err := io.ReadAll(req.Body)
 	defer func(Body io.ReadCloser) {
 		_ = Body.Close()
@@ -84,7 +84,7 @@ func (r *Router) getOrderNumber(req *http.Request) (int, error) {
 		return 0, err
 	}
 
-	number, err := strconv.Atoi(string(data))
+	number, err := strconv.ParseInt(string(data), 10, 64)
 	if err != nil {
 		return 0, err
 	}

@@ -7,27 +7,27 @@ type OrdersUseCase struct {
 }
 
 type storage interface {
-	FindUserIDByOrderNumber(ctx context.Context, number int) (int, error)
-	CreateOrder(ctx context.Context, number int, userID int) error
+	FindUserIDByOrderNumber(ctx context.Context, number int64) (int, error)
+	CreateOrder(ctx context.Context, number int64, userID int) error
 }
 
 func New(storage storage) *OrdersUseCase {
 	return &OrdersUseCase{storage: storage}
 }
 
-func (us *OrdersUseCase) GetUserID(ctx context.Context, number int) (int, error) {
+func (us *OrdersUseCase) GetUserID(ctx context.Context, number int64) (int, error) {
 	return us.storage.FindUserIDByOrderNumber(ctx, number)
 }
 
-func (us *OrdersUseCase) CreateOrder(ctx context.Context, number int, userID int) error {
+func (us *OrdersUseCase) CreateOrder(ctx context.Context, number int64, userID int) error {
 	return us.storage.CreateOrder(ctx, number, userID)
 }
 
-func (us *OrdersUseCase) ValidateLuhn(number int) bool {
+func (us *OrdersUseCase) ValidateLuhn(number int64) bool {
 	return us.getLuhnSum(number)%10 == 0
 }
 
-func (us *OrdersUseCase) getLuhnSum(number int) int {
+func (us *OrdersUseCase) getLuhnSum(number int64) int {
 	var sum int
 
 	for i := 0; number > 0; i++ {
@@ -40,7 +40,7 @@ func (us *OrdersUseCase) getLuhnSum(number int) int {
 			}
 		}
 
-		sum += cur
+		sum += int(cur)
 
 		number = number / 10
 	}

@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"github.com/MaximPolyaev/gofermart/internal/usecases/userusercase"
 	"log"
 	"net/http"
 
@@ -12,6 +11,7 @@ import (
 	"github.com/MaximPolyaev/gofermart/internal/dbconn"
 	"github.com/MaximPolyaev/gofermart/internal/usecases/authusecase"
 	"github.com/MaximPolyaev/gofermart/internal/usecases/ordersusecase"
+	"github.com/MaximPolyaev/gofermart/internal/usecases/userusercase"
 )
 
 func main() {
