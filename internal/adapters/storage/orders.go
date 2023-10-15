@@ -37,10 +37,15 @@ func (s *Storage) CreateOrder(ctx context.Context, number string, userID int) er
 
 func (s *Storage) FindOrdersByUserId(ctx context.Context, userID int) ([]entities.Order, error) {
 	q := `
-SELECT number, status, created_at
-FROM doc_order
-WHERE user_id = $1
-ORDER BY created_at
+SELECT t.number, t.status, t.created_at, coalesce(b.points, 0) as points
+FROM doc_order t
+LEFT JOIN (
+    SELECT t.order_id, sum(t.points) points
+    FROM reg_points_balance t
+    GROUP BY t.order_id
+) b ON b.order_id = t.id
+WHERE t.user_id = $1
+ORDER BY t.created_at
 `
 
 	rows, err := s.db.QueryContext(ctx, q, userID)
@@ -57,8 +62,9 @@ ORDER BY created_at
 		var number string
 		var status enums.OrderStatus
 		var createdAt time.Time
+		var points float64
 
-		err := rows.Scan(&number, &status, &createdAt)
+		err := rows.Scan(&number, &status, &createdAt, &points)
 		if err != nil {
 			return nil, err
 		}
@@ -66,6 +72,7 @@ ORDER BY created_at
 		orders = append(orders, entities.Order{
 			Number:     number,
 			Status:     status,
+			Accrual:    points,
 			UploadedAt: entities.RFC3339Time(createdAt),
 		})
 	}

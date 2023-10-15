@@ -11,7 +11,7 @@ type RFC3339Time time.Time
 type Order struct {
 	Number     string            `json:"number"`
 	Status     enums.OrderStatus `json:"status"`
-	Accrual    int               `json:"accrual,omitempty"`
+	Accrual    float64           `json:"accrual,omitempty"`
 	UploadedAt RFC3339Time       `json:"uploaded_at"`
 }
 
