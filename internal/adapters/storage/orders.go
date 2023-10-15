@@ -50,12 +50,12 @@ ORDER BY t.created_at
 `
 
 	rows, err := s.db.QueryContext(ctx, q, userID)
-	defer func(rows *sql.Rows) {
+	defer func() {
 		err := rows.Close()
 		if err != nil {
 			log.Fatal(err)
 		}
-	}(rows)
+	}()
 	if err != nil {
 		return nil, err
 	}
