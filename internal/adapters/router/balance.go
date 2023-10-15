@@ -82,7 +82,7 @@ func (r *Router) withdraw() http.HandlerFunc {
 			return
 		}
 
-		userId, err := r.getUserIDFromReq(req)
+		userID, err := r.getUserIDFromReq(req)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusUnauthorized)
 			return
@@ -96,13 +96,13 @@ func (r *Router) withdraw() http.HandlerFunc {
 
 		rctx := req.Context()
 
-		userIdByOrder, err := r.orders.GetUserID(rctx, writeOff.Order)
+		userIDByOrder, err := r.orders.GetUserID(rctx, writeOff.Order)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
-		if userIdByOrder != userId {
+		if userIDByOrder != userID {
 			http.Error(w, "order by is assignment another user", http.StatusUnprocessableEntity)
 			return
 		}
