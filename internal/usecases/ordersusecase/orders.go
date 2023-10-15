@@ -8,7 +8,7 @@ type OrdersUseCase struct {
 
 type storage interface {
 	FindUserIDByOrderNumber(ctx context.Context, number int) (int, error)
-	CreateOrder(ctx context.Context, number int, userId int) error
+	CreateOrder(ctx context.Context, number int, userID int) error
 }
 
 func New(storage storage) *OrdersUseCase {
@@ -19,8 +19,8 @@ func (us *OrdersUseCase) GetUserID(ctx context.Context, number int) (int, error)
 	return us.storage.FindUserIDByOrderNumber(ctx, number)
 }
 
-func (us *OrdersUseCase) CreateOrder(ctx context.Context, number int, userId int) error {
-	return us.storage.CreateOrder(ctx, number, userId)
+func (us *OrdersUseCase) CreateOrder(ctx context.Context, number int, userID int) error {
+	return us.storage.CreateOrder(ctx, number, userID)
 }
 
 func (us *OrdersUseCase) ValidateLuhn(number int) bool {

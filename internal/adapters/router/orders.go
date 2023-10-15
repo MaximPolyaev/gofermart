@@ -10,7 +10,7 @@ import (
 type ordersUseCase interface {
 	ValidateLuhn(number int) bool
 	GetUserID(ctx context.Context, number int) (int, error)
-	CreateOrder(ctx context.Context, number int, userId int) error
+	CreateOrder(ctx context.Context, number int, userID int) error
 }
 
 func (r *Router) postOrders() http.HandlerFunc {
@@ -36,7 +36,7 @@ func (r *Router) postOrders() http.HandlerFunc {
 
 		rctx := req.Context()
 
-		userId, err := r.getUserIDFromReq(req)
+		userID, err := r.getUserIDFromReq(req)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusUnauthorized)
 			return
@@ -49,7 +49,7 @@ func (r *Router) postOrders() http.HandlerFunc {
 		}
 
 		if userIdByExistOrder != 0 {
-			if userIdByExistOrder == userId {
+			if userIdByExistOrder == userID {
 				w.WriteHeader(http.StatusOK)
 				return
 			}
@@ -58,7 +58,7 @@ func (r *Router) postOrders() http.HandlerFunc {
 			return
 		}
 
-		err = r.orders.CreateOrder(rctx, number, userId)
+		err = r.orders.CreateOrder(rctx, number, userID)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -76,9 +76,6 @@ func (r *Router) getOrders() http.HandlerFunc {
 
 func (r *Router) getOrderNumber(req *http.Request) (int, error) {
 	data, err := io.ReadAll(req.Body)
-	if err != nil {
-		return 0, err
-	}
 	defer func(Body io.ReadCloser) {
 		_ = Body.Close()
 	}(req.Body)
