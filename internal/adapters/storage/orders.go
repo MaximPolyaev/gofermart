@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"log"
 	"time"
 
 	"github.com/MaximPolyaev/gofermart/internal/entities"
@@ -49,7 +50,12 @@ ORDER BY t.created_at
 `
 
 	rows, err := s.db.QueryContext(ctx, q, userID)
-	defer rows.Close()
+	defer func(rows *sql.Rows) {
+		err := rows.Close()
+		if err != nil {
+			log.Fatal(err)
+		}
+	}(rows)
 	if err != nil {
 		return nil, err
 	}
