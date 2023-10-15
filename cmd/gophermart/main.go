@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"github.com/MaximPolyaev/gofermart/internal/usecases/balanceusecase"
 	"log"
 	"net/http"
 
@@ -11,6 +10,7 @@ import (
 	"github.com/MaximPolyaev/gofermart/internal/config"
 	"github.com/MaximPolyaev/gofermart/internal/dbconn"
 	"github.com/MaximPolyaev/gofermart/internal/usecases/authusecase"
+	"github.com/MaximPolyaev/gofermart/internal/usecases/balanceusecase"
 	"github.com/MaximPolyaev/gofermart/internal/usecases/ordersusecase"
 	"github.com/MaximPolyaev/gofermart/internal/usecases/userusecase"
 )
