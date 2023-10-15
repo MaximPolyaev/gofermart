@@ -81,5 +81,9 @@ ORDER BY t.created_at
 		})
 	}
 
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
 	return orders, nil
 }
