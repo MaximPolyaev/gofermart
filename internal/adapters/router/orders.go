@@ -2,14 +2,18 @@ package router
 
 import (
 	"context"
+	"encoding/json"
 	"io"
 	"net/http"
+
+	"github.com/MaximPolyaev/gofermart/internal/entities"
 )
 
 type ordersUseCase interface {
 	ValidateNumber(number string) error
 	GetUserID(ctx context.Context, number string) (int, error)
 	CreateOrder(ctx context.Context, number string, userID int) error
+	GetOrders(ctx context.Context, userID int) ([]entities.Order, error)
 }
 
 func (r *Router) postOrders() http.HandlerFunc {
@@ -72,7 +76,35 @@ func (r *Router) postOrders() http.HandlerFunc {
 }
 
 func (r *Router) getOrders() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
+
+		userID, err := r.getUserIDFromReq(req)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusUnauthorized)
+			return
+		}
+
+		orders, err := r.orders.GetOrders(req.Context(), userID)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		if len(orders) == 0 {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+
+		data, err := json.Marshal(orders)
+		if err == nil {
+			_, err = w.Write(data)
+		}
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
 	}
 }

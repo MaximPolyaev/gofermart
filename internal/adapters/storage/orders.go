@@ -4,6 +4,10 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"time"
+
+	"github.com/MaximPolyaev/gofermart/internal/entities"
+	"github.com/MaximPolyaev/gofermart/internal/enums"
 )
 
 func (s *Storage) FindUserIDByOrderNumber(ctx context.Context, number string) (int, error) {
@@ -29,4 +33,42 @@ func (s *Storage) CreateOrder(ctx context.Context, number string, userID int) er
 	_, err := s.db.ExecContext(ctx, q, number, userID)
 
 	return err
+}
+
+func (s *Storage) FindOrdersByUserId(ctx context.Context, userID int) ([]entities.Order, error) {
+	q := `
+SELECT number, status, created_at
+FROM doc_order
+WHERE user_id = $1
+ORDER BY created_at
+`
+
+	rows, err := s.db.QueryContext(ctx, q, userID)
+	defer func() {
+		_ = rows.Close()
+	}()
+	if err != nil {
+		return nil, err
+	}
+
+	var orders []entities.Order
+
+	for rows.Next() {
+		var number string
+		var status enums.OrderStatus
+		var createdAt time.Time
+
+		err := rows.Scan(&number, &status, &createdAt)
+		if err != nil {
+			return nil, err
+		}
+
+		orders = append(orders, entities.Order{
+			Number:     number,
+			Status:     status,
+			UploadedAt: entities.RFC3339Time(createdAt),
+		})
+	}
+
+	return orders, nil
 }

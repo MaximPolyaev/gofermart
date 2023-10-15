@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"strconv"
+
+	"github.com/MaximPolyaev/gofermart/internal/entities"
 )
 
 type OrdersUseCase struct {
@@ -13,6 +15,7 @@ type OrdersUseCase struct {
 type storage interface {
 	FindUserIDByOrderNumber(ctx context.Context, number string) (int, error)
 	CreateOrder(ctx context.Context, number string, userID int) error
+	FindOrdersByUserId(ctx context.Context, userID int) ([]entities.Order, error)
 }
 
 func New(storage storage) *OrdersUseCase {
@@ -25,6 +28,10 @@ func (us *OrdersUseCase) GetUserID(ctx context.Context, number string) (int, err
 
 func (us *OrdersUseCase) CreateOrder(ctx context.Context, number string, userID int) error {
 	return us.storage.CreateOrder(ctx, number, userID)
+}
+
+func (us *OrdersUseCase) GetOrders(ctx context.Context, userID int) ([]entities.Order, error) {
+	return us.storage.FindOrdersByUserId(ctx, userID)
 }
 
 func (us *OrdersUseCase) ValidateNumber(number string) error {
