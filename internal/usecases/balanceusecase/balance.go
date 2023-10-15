@@ -2,6 +2,7 @@ package balanceusecase
 
 import (
 	"context"
+
 	"github.com/MaximPolyaev/gofermart/internal/entities"
 )
 
@@ -14,6 +15,7 @@ type storage interface {
 	FindBalanceByOrderNumber(ctx context.Context, number string) (float64, error)
 	CreatePointsOperation(ctx context.Context, orderID int, points float64) error
 	FindOrderIDByNumber(ctx context.Context, number string) (int, error)
+	FindWroteOffs(ctx context.Context, userID int) ([]entities.WroteOff, error)
 }
 
 func New(storage storage) *BalanceUseCase {
@@ -40,4 +42,8 @@ func (uc *BalanceUseCase) WriteOff(ctx context.Context, off entities.WriteOff) e
 	}
 
 	return uc.storage.CreatePointsOperation(ctx, orderID, -1*off.Sum)
+}
+
+func (uc *BalanceUseCase) GetWroteOffs(ctx context.Context, userID int) ([]entities.WroteOff, error) {
+	return uc.storage.FindWroteOffs(ctx, userID)
 }

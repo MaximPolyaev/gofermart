@@ -13,6 +13,7 @@ type balanceUseCase interface {
 	GetBalance(ctx context.Context, userID int) (*entities.UserBalance, error)
 	IsAvailableWriteOff(ctx context.Context, writeOff *entities.WriteOff) (bool, error)
 	WriteOff(ctx context.Context, off entities.WriteOff) error
+	GetWroteOffs(ctx context.Context, userID int) ([]entities.WroteOff, error)
 }
 
 func WithBalanceUseCase(balance balanceUseCase) func(r *Router) {
@@ -131,5 +132,33 @@ func (r *Router) withdraw() http.HandlerFunc {
 func (r *Router) withdrawInfo() http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
+
+		userID, err := r.getUserIDFromReq(req)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusUnauthorized)
+			return
+		}
+
+		wroteOffs, err := r.balance.GetWroteOffs(req.Context(), userID)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		if len(wroteOffs) == 0 {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+
+		data, err := json.Marshal(wroteOffs)
+		if err == nil {
+			_, err = w.Write(data)
+		}
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
 	}
 }
