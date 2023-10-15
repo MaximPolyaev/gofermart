@@ -10,13 +10,39 @@ import (
 
 type Router struct {
 	*chi.Mux
-	auth AuthUseCase
+	auth   authUseCase
+	orders ordersUseCase
+	user   userUseCase
 }
 
-func New(auth AuthUseCase) *Router {
-	router := chi.NewRouter()
+func New(useCases ...func(r *Router)) *Router {
+	mux := chi.NewRouter()
 
-	return &Router{Mux: router, auth: auth}
+	router := &Router{Mux: mux}
+
+	for _, uc := range useCases {
+		uc(router)
+	}
+
+	return router
+}
+
+func WithAuthUseCase(auth authUseCase) func(r *Router) {
+	return func(r *Router) {
+		r.auth = auth
+	}
+}
+
+func WithOrdersUseCase(orders ordersUseCase) func(r *Router) {
+	return func(r *Router) {
+		r.orders = orders
+	}
+}
+
+func WithUserUseCase(user userUseCase) func(r *Router) {
+	return func(r *Router) {
+		r.user = user
+	}
 }
 
 func (r *Router) Configure() {
@@ -34,18 +60,6 @@ func (r *Router) Configure() {
 	r.Get("/api/user/balance", r.balance())
 	r.Post("/api/user/balance/withdraw", r.withdraw())
 	r.Get("/api/user/withdrawals", r.withdrawInfo())
-}
-
-func (r *Router) postOrders() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-	}
-}
-
-func (r *Router) getOrders() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-	}
 }
 
 func (r *Router) balance() http.HandlerFunc {

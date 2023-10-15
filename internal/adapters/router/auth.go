@@ -7,11 +7,10 @@ import (
 	"net/http"
 
 	"github.com/MaximPolyaev/gofermart/internal/entities"
-	"github.com/MaximPolyaev/gofermart/internal/utils/jwt"
 	"github.com/go-chi/chi/v5"
 )
 
-type AuthUseCase interface {
+type authUseCase interface {
 	ValidatePayload(payload entities.AuthPayload) error
 	SignIn(ctx context.Context, payload entities.AuthPayload) (string, error)
 	SignUp(ctx context.Context, payload entities.AuthPayload) (string, error)
@@ -127,15 +126,7 @@ func (r *Router) isNeedCheckAuth(req *http.Request) bool {
 }
 
 func (r *Router) isAuthenticated(req *http.Request) bool {
-	token := r.getToken(req)
+	claims, err := r.getClaimsFromReq(req)
 
-	if token == "" {
-		return false
-	}
-
-	if err := jwt.ValidateToken(token); err != nil {
-		return false
-	}
-
-	return true
+	return err == nil && claims != nil
 }

@@ -16,7 +16,7 @@ type AuthUseCase struct {
 }
 
 type storage interface {
-	GetUserWithPassword(ctx context.Context, login string) (*entities.UserWithPassword, error)
+	FindUserWithPassword(ctx context.Context, login string) (*entities.UserWithPassword, error)
 	CreateUser(ctx context.Context, user *entities.UserWithPassword) error
 }
 
@@ -39,7 +39,7 @@ func (a *AuthUseCase) ValidatePayload(payload entities.AuthPayload) error {
 }
 
 func (a *AuthUseCase) SignIn(ctx context.Context, payload entities.AuthPayload) (string, error) {
-	user, err := a.storage.GetUserWithPassword(ctx, payload.Login)
+	user, err := a.storage.FindUserWithPassword(ctx, payload.Login)
 	if err != nil {
 		return "", err
 	}
@@ -56,7 +56,7 @@ func (a *AuthUseCase) SignIn(ctx context.Context, payload entities.AuthPayload) 
 }
 
 func (a *AuthUseCase) SignUp(ctx context.Context, payload entities.AuthPayload) (string, error) {
-	existUser, err := a.storage.GetUserWithPassword(ctx, payload.Login)
+	existUser, err := a.storage.FindUserWithPassword(ctx, payload.Login)
 	if err != nil {
 		return "", err
 	}

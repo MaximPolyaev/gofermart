@@ -1,8 +1,11 @@
 package router
 
 import (
+	"errors"
 	"net/http"
 	"strings"
+
+	"github.com/MaximPolyaev/gofermart/internal/utils/jwt"
 )
 
 const (
@@ -22,4 +25,20 @@ func (r *Router) getToken(req *http.Request) string {
 	}
 
 	return strings.Replace(authHeader, bearerKey+" ", "", 1)
+}
+
+func (r *Router) getClaimsFromReq(req *http.Request) (*jwt.Claims, error) {
+	token := r.getToken(req)
+
+	if token == "" {
+		return nil, errors.New("token could not be determined")
+	}
+
+	claims, err := jwt.ParseClaims(token)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return claims, nil
 }

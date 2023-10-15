@@ -8,7 +8,7 @@ import (
 	"github.com/MaximPolyaev/gofermart/internal/entities"
 )
 
-func (s *Storage) GetUserWithPassword(ctx context.Context, login string) (*entities.UserWithPassword, error) {
+func (s *Storage) FindUserWithPassword(ctx context.Context, login string) (*entities.UserWithPassword, error) {
 	var user entities.UserWithPassword
 
 	q := `SELECT login, password FROM ref_user WHERE login = $1 LIMIT 1`

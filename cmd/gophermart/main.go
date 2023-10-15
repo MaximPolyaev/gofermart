@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/MaximPolyaev/gofermart/internal/usecases/userusercase"
 	"log"
 	"net/http"
 
@@ -10,6 +11,7 @@ import (
 	"github.com/MaximPolyaev/gofermart/internal/config"
 	"github.com/MaximPolyaev/gofermart/internal/dbconn"
 	"github.com/MaximPolyaev/gofermart/internal/usecases/authusecase"
+	"github.com/MaximPolyaev/gofermart/internal/usecases/ordersusecase"
 )
 
 func main() {
@@ -25,9 +27,12 @@ func main() {
 
 	store := storage.New(db)
 
-	auth := authusecase.New(store)
+	rtr := router.New(
+		router.WithAuthUseCase(authusecase.New(store)),
+		router.WithOrdersUseCase(ordersusecase.New(store)),
+		router.WithUserUseCase(userusercase.New(store)),
+	)
 
-	rtr := router.New(auth)
 	rtr.Configure()
 
 	fmt.Println("start server on", *cfg.RunAddress)
