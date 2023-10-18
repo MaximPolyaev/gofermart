@@ -66,14 +66,7 @@ WHERE o.number = $1
 }
 
 func (s *Storage) CreatePointsOperation(ctx context.Context, orderID int, points float64) error {
-	q := `INSERT INTO reg_points_balance (order_id, points) VALUES ($1, $2)`
-
-	_, err := s.db.ExecContext(ctx, q, orderID, points)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return s.createPointsOperation(ctx, s.db, orderID, points)
 }
 
 func (s *Storage) FindWroteOffs(ctx context.Context, userID int) ([]entities.WroteOff, error) {
@@ -124,4 +117,15 @@ ORDER BY t.created_at
 	}
 
 	return wroteOffs, nil
+}
+
+func (s *Storage) createPointsOperation(ctx context.Context, ex execCtx, orderID int, points float64) error {
+	q := `INSERT INTO reg_points_balance (order_id, points) VALUES ($1, $2)`
+
+	_, err := ex.ExecContext(ctx, q, orderID, points)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

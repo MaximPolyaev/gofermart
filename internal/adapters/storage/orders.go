@@ -5,10 +5,10 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"github.com/MaximPolyaev/gofermart/internal/enums/orderstatus"
 	"time"
 
 	"github.com/MaximPolyaev/gofermart/internal/entities"
+	"github.com/MaximPolyaev/gofermart/internal/enums/orderstatus"
 )
 
 func (s *Storage) FindUserIDByOrderNumber(ctx context.Context, number string) (int, error) {
@@ -34,6 +34,42 @@ func (s *Storage) CreateOrder(ctx context.Context, number string, userID int) er
 	_, err := s.db.ExecContext(ctx, q, number, userID)
 
 	return err
+}
+
+func (s *Storage) SaveOrder(ctx context.Context, order *entities.Order) error {
+	if order.Accrual == 0 {
+		return s.ChangeOrderStatus(ctx, order.Number, order.Status)
+	}
+
+	orderID, err := s.FindOrderIDByNumber(ctx, order.Number)
+	if err != nil {
+		return err
+	}
+
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+
+	err = s.changeOrderStatus(ctx, tx, order.Number, order.Status)
+	if err != nil {
+		return s.rollback(tx, err)
+	}
+
+	if order.Accrual != order.Accrual {
+
+	}
+	err = s.createPointsOperation(ctx, tx, orderID, order.Accrual)
+	if err != nil {
+		return s.rollback(tx, err)
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (s *Storage) FindOrdersByUserID(ctx context.Context, userID int) ([]entities.Order, error) {
@@ -144,9 +180,27 @@ WHERE status IN ($1, $2)
 }
 
 func (s *Storage) ChangeOrderStatus(ctx context.Context, number string, status orderstatus.OrderStatus) error {
-	q := `UPDATE doc_order SET status = $1 WHERE number = $2`
+	return s.changeOrderStatus(ctx, s.db, number, status)
+}
 
-	_, err := s.db.QueryContext(ctx, q, status, number)
+func (s *Storage) changeOrderStatus(
+	ctx context.Context,
+	ex execCtx,
+	number string,
+	status orderstatus.OrderStatus,
+) error {
+	q := `UPDATE doc_order SET status = $1, changed_at = now() WHERE number = $2`
+
+	_, err := ex.ExecContext(ctx, q, status, number)
+
+	return err
+}
+
+func (s *Storage) rollback(tx *sql.Tx, err error) error {
+	txErr := tx.Rollback()
+	if txErr != nil {
+		return txErr
+	}
 
 	return err
 }

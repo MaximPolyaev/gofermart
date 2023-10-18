@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/MaximPolyaev/gofermart/internal/adapters/accrual"
 	"log"
 	"net/http"
 
@@ -29,7 +30,9 @@ func main() {
 
 	store := storage.New(db)
 
-	ordersUseCase := ordersusecase.New(store, nil)
+	accrualAdapter := accrual.New(*cfg.AccrualSystemAddress)
+
+	ordersUseCase := ordersusecase.New(store, accrualAdapter)
 
 	rtr := router.New(
 		router.WithAuthUseCase(authusecase.New(store)),
