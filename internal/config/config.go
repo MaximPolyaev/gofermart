@@ -13,7 +13,7 @@ import (
 const (
 	defaultRunAddress           = "localhost:8081"
 	defaultDatabaseURI          = "host=localhost port=5433 user=admin password=password dbname=gofermart sslmode=disable"
-	defaultAccrualSystemAddress = "localhost:8082"
+	defaultAccrualSystemAddress = "http://localhost:8082"
 )
 
 type Config struct {

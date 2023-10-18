@@ -21,7 +21,7 @@ type HTTPClient struct {
 }
 
 func New(baseURL string) *HTTPClient {
-	return &HTTPClient{client: &http.Client{}, baseURL: "http://" + baseURL}
+	return &HTTPClient{client: &http.Client{}, baseURL: baseURL}
 }
 
 func (c *HTTPClient) FetchAccrualOrder(ctx context.Context, number string) (*entities.AccrualOrder, error) {
@@ -41,7 +41,7 @@ func (c *HTTPClient) FetchAccrualOrder(ctx context.Context, number string) (*ent
 	}
 
 	if resp.StatusCode == http.StatusNoContent {
-		return nil, errors.New("orders is not registered " + fmt.Sprintf("%s", time.Now()))
+		return nil, errors.New("orders is not registered " + time.Now().String())
 	}
 
 	if resp.StatusCode == http.StatusTooManyRequests {
