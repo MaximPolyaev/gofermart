@@ -61,9 +61,6 @@ func (s *Storage) SaveOrder(ctx context.Context, order *entities.Order) error {
 		return s.rollback(tx, err)
 	}
 
-	if order.Accrual != order.Accrual {
-
-	}
 	err = s.createPointsOperation(ctx, tx, orderID, userID, order.Accrual)
 	if err != nil {
 		return s.rollback(tx, err)
