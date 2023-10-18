@@ -16,8 +16,7 @@ func (s *Storage) FindBalanceByUserID(ctx context.Context, userID int) (*entitie
 	q := `
 SELECT sum(t.points) as current, sum(case when t.points < 0 then -1 * t.points else 0 end) as withdrawn
 FROM reg_points_balance t
-JOIN doc_order o ON o.id = t.order_id
-WHERE o.user_id = $1
+WHERE t.user_id = $1
 `
 
 	var current sql.NullFloat64
@@ -43,30 +42,8 @@ WHERE o.user_id = $1
 	return &balance, nil
 }
 
-func (s *Storage) FindBalanceByOrderNumber(ctx context.Context, number string) (float64, error) {
-	q := `
-SELECT sum(t.points) 
-FROM reg_points_balance t 
-JOIN doc_order o ON o.id = t.order_id
-WHERE o.number = $1
-    `
-
-	var points sql.NullFloat64
-
-	err := s.db.QueryRowContext(ctx, q, number).Scan(&points)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return 0, nil
-		}
-
-		return 0, err
-	}
-
-	return points.Float64, nil
-}
-
-func (s *Storage) CreatePointsOperation(ctx context.Context, orderID int, points float64) error {
-	return s.createPointsOperation(ctx, s.db, orderID, points)
+func (s *Storage) CreatePointsOperation(ctx context.Context, orderID int, userID int, points float64) error {
+	return s.createPointsOperation(ctx, s.db, orderID, userID, points)
 }
 
 func (s *Storage) FindWroteOffs(ctx context.Context, userID int) ([]entities.WroteOff, error) {
@@ -119,10 +96,10 @@ ORDER BY t.created_at
 	return wroteOffs, nil
 }
 
-func (s *Storage) createPointsOperation(ctx context.Context, ex execCtx, orderID int, points float64) error {
-	q := `INSERT INTO reg_points_balance (order_id, points) VALUES ($1, $2)`
+func (s *Storage) createPointsOperation(ctx context.Context, ex execCtx, orderID int, userID int, points float64) error {
+	q := `INSERT INTO reg_points_balance (order_id, user_id, points) VALUES ($1, $2, $3)`
 
-	_, err := ex.ExecContext(ctx, q, orderID, points)
+	_, err := ex.ExecContext(ctx, q, orderID, userID, points)
 	if err != nil {
 		return err
 	}

@@ -12,8 +12,7 @@ type BalanceUseCase struct {
 
 type storage interface {
 	FindBalanceByUserID(ctx context.Context, userID int) (*entities.UserBalance, error)
-	FindBalanceByOrderNumber(ctx context.Context, number string) (float64, error)
-	CreatePointsOperation(ctx context.Context, orderID int, points float64) error
+	CreatePointsOperation(ctx context.Context, orderID int, userID int, points float64) error
 	FindOrderIDByNumber(ctx context.Context, number string) (int, error)
 	FindWroteOffs(ctx context.Context, userID int) ([]entities.WroteOff, error)
 }
@@ -26,22 +25,22 @@ func (uc *BalanceUseCase) GetBalance(ctx context.Context, userID int) (*entities
 	return uc.storage.FindBalanceByUserID(ctx, userID)
 }
 
-func (uc *BalanceUseCase) IsAvailableWriteOff(ctx context.Context, writeOff *entities.WriteOff) (bool, error) {
-	balance, err := uc.storage.FindBalanceByOrderNumber(ctx, writeOff.Order)
+func (uc *BalanceUseCase) IsAvailableWriteOff(ctx context.Context, writeOff *entities.WriteOff, userID int) (bool, error) {
+	balance, err := uc.storage.FindBalanceByUserID(ctx, userID)
 	if err != nil {
 		return false, err
 	}
 
-	return balance > 0 && balance >= writeOff.Sum, nil
+	return balance.Current > 0 && balance.Current >= writeOff.Sum, nil
 }
 
-func (uc *BalanceUseCase) WriteOff(ctx context.Context, off entities.WriteOff) error {
+func (uc *BalanceUseCase) WriteOff(ctx context.Context, off entities.WriteOff, userID int) error {
 	orderID, err := uc.storage.FindOrderIDByNumber(ctx, off.Order)
 	if err != nil {
 		return err
 	}
 
-	return uc.storage.CreatePointsOperation(ctx, orderID, -1*off.Sum)
+	return uc.storage.CreatePointsOperation(ctx, orderID, userID, -1*off.Sum)
 }
 
 func (uc *BalanceUseCase) GetWroteOffs(ctx context.Context, userID int) ([]entities.WroteOff, error) {

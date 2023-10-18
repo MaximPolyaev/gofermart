@@ -46,6 +46,11 @@ func (s *Storage) SaveOrder(ctx context.Context, order *entities.Order) error {
 		return err
 	}
 
+	userID, err := s.FindUserIDByOrderNumber(ctx, order.Number)
+	if err != nil {
+		return err
+	}
+
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
@@ -59,7 +64,7 @@ func (s *Storage) SaveOrder(ctx context.Context, order *entities.Order) error {
 	if order.Accrual != order.Accrual {
 
 	}
-	err = s.createPointsOperation(ctx, tx, orderID, order.Accrual)
+	err = s.createPointsOperation(ctx, tx, orderID, userID, order.Accrual)
 	if err != nil {
 		return s.rollback(tx, err)
 	}

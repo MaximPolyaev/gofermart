@@ -11,8 +11,8 @@ import (
 
 type balanceUseCase interface {
 	GetBalance(ctx context.Context, userID int) (*entities.UserBalance, error)
-	IsAvailableWriteOff(ctx context.Context, writeOff *entities.WriteOff) (bool, error)
-	WriteOff(ctx context.Context, off entities.WriteOff) error
+	IsAvailableWriteOff(ctx context.Context, writeOff *entities.WriteOff, userID int) (bool, error)
+	WriteOff(ctx context.Context, off entities.WriteOff, userID int) error
 	GetWroteOffs(ctx context.Context, userID int) ([]entities.WroteOff, error)
 }
 
@@ -103,12 +103,18 @@ func (r *Router) withdraw() http.HandlerFunc {
 			return
 		}
 
-		if userIDByOrder != userID {
+		if userIDByOrder == 0 {
+			err = r.orders.CreateOrder(rctx, writeOff.Order, userID)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+		} else if userIDByOrder != userID {
 			http.Error(w, "order by is assignment another user", http.StatusUnprocessableEntity)
 			return
 		}
 
-		isAvailableWriteOff, err := r.balance.IsAvailableWriteOff(rctx, &writeOff)
+		isAvailableWriteOff, err := r.balance.IsAvailableWriteOff(rctx, &writeOff, userID)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -119,7 +125,7 @@ func (r *Router) withdraw() http.HandlerFunc {
 			return
 		}
 
-		err = r.balance.WriteOff(rctx, writeOff)
+		err = r.balance.WriteOff(rctx, writeOff, userID)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
