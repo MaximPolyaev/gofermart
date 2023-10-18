@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/http"
@@ -28,14 +29,21 @@ func main() {
 
 	store := storage.New(db)
 
+	ordersUseCase := ordersusecase.New(store, nil)
+
 	rtr := router.New(
 		router.WithAuthUseCase(authusecase.New(store)),
-		router.WithOrdersUseCase(ordersusecase.New(store)),
+		router.WithOrdersUseCase(ordersUseCase),
 		router.WithUserUseCase(userusecase.New(store)),
 		router.WithBalanceUseCase(balanceusecase.New(store)),
 	)
 
 	rtr.Configure()
+
+	err = ordersUseCase.StartUpdateOrdersProcess(context.Background())
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	fmt.Println("start server on", *cfg.RunAddress)
 	if err := http.ListenAndServe(*cfg.RunAddress, rtr); err != nil {

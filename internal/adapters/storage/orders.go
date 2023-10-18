@@ -5,10 +5,10 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"github.com/MaximPolyaev/gofermart/internal/enums/orderstatus"
 	"time"
 
 	"github.com/MaximPolyaev/gofermart/internal/entities"
-	"github.com/MaximPolyaev/gofermart/internal/enums"
 )
 
 func (s *Storage) FindUserIDByOrderNumber(ctx context.Context, number string) (int, error) {
@@ -66,7 +66,7 @@ ORDER BY t.created_at
 
 	for rows.Next() {
 		var number string
-		var status enums.OrderStatus
+		var status orderstatus.OrderStatus
 		var createdAt time.Time
 		var points float64
 
@@ -101,4 +101,52 @@ func (s *Storage) FindOrderIDByNumber(ctx context.Context, number string) (int, 
 	}
 
 	return id, nil
+}
+
+func (s *Storage) FindOrderNumbersToUpdateAccruals(ctx context.Context) ([]string, error) {
+	q := `
+SELECT number
+FROM doc_order
+WHERE status IN ($1, $2)
+`
+
+	rows, err := s.db.QueryContext(ctx, q, orderstatus.NEW, orderstatus.PROCESSING)
+	defer func() {
+		if rows != nil {
+			err := rows.Close()
+			if err != nil {
+				fmt.Println("rows close", err)
+			}
+		}
+	}()
+	if err != nil {
+		return nil, err
+	}
+
+	var orders []string
+
+	for rows.Next() {
+		var number string
+
+		err := rows.Scan(&number)
+		if err != nil {
+			return nil, err
+		}
+
+		orders = append(orders, number)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return orders, nil
+}
+
+func (s *Storage) ChangeOrderStatus(ctx context.Context, number string, status orderstatus.OrderStatus) error {
+	q := `UPDATE doc_order SET status = $1 WHERE number = $2`
+
+	_, err := s.db.QueryContext(ctx, q, status, number)
+
+	return err
 }
