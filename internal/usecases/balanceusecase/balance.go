@@ -8,6 +8,7 @@ import (
 
 type BalanceUseCase struct {
 	storage storage
+	mutex   mutex
 }
 
 type storage interface {
@@ -17,12 +18,25 @@ type storage interface {
 	FindWroteOffs(ctx context.Context, userID int) ([]entities.WroteOff, error)
 }
 
-func New(storage storage) *BalanceUseCase {
-	return &BalanceUseCase{storage: storage}
+type mutex interface {
+	Lock(val int)
+	Unlock(val int)
+}
+
+func New(storage storage, mutex mutex) *BalanceUseCase {
+	return &BalanceUseCase{storage: storage, mutex: mutex}
 }
 
 func (uc *BalanceUseCase) GetBalance(ctx context.Context, userID int) (*entities.UserBalance, error) {
 	return uc.storage.FindBalanceByUserID(ctx, userID)
+}
+
+func (uc *BalanceUseCase) LockUser(userID int) {
+	uc.mutex.Lock(userID)
+}
+
+func (uc *BalanceUseCase) UnlockUser(userID int) {
+	uc.mutex.Unlock(userID)
 }
 
 func (uc *BalanceUseCase) IsAvailableWriteOff(ctx context.Context, writeOff *entities.WriteOff, userID int) (bool, error) {

@@ -17,6 +17,7 @@ import (
 	"github.com/MaximPolyaev/gofermart/internal/usecases/ordersusecase"
 	"github.com/MaximPolyaev/gofermart/internal/usecases/userusecase"
 	"github.com/MaximPolyaev/gofermart/internal/utils/logger"
+	"github.com/MaximPolyaev/gofermart/internal/utils/mutex"
 	"github.com/sirupsen/logrus"
 )
 
@@ -71,7 +72,7 @@ func run(ctx context.Context, log *logger.Logger) error {
 		router.WithAuthUseCase(authusecase.New(store)),
 		router.WithOrdersUseCase(ordersUseCase),
 		router.WithUserUseCase(userusecase.New(store)),
-		router.WithBalanceUseCase(balanceusecase.New(store)),
+		router.WithBalanceUseCase(balanceusecase.New(store, mutex.New())),
 	).Configure()
 
 	log.WithFields(logrus.Fields{

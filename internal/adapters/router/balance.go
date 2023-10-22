@@ -14,6 +14,8 @@ type balanceUseCase interface {
 	IsAvailableWriteOff(ctx context.Context, writeOff *entities.WriteOff, userID int) (bool, error)
 	WriteOff(ctx context.Context, off entities.WriteOff, userID int) error
 	GetWroteOffs(ctx context.Context, userID int) ([]entities.WroteOff, error)
+	LockUser(userID int)
+	UnlockUser(userID int)
 }
 
 func WithBalanceUseCase(balance balanceUseCase) func(r *Router) {
@@ -113,6 +115,9 @@ func (r *Router) withdraw() http.HandlerFunc {
 			http.Error(w, "order by is assignment another user", http.StatusUnprocessableEntity)
 			return
 		}
+
+		r.balance.LockUser(userID)
+		defer r.balance.UnlockUser(userID)
 
 		isAvailableWriteOff, err := r.balance.IsAvailableWriteOff(rctx, &writeOff, userID)
 		if err != nil {
