@@ -2,11 +2,12 @@ package main
 
 import (
 	"context"
-	"fmt"
-	"github.com/MaximPolyaev/gofermart/internal/adapters/accrual"
-	"log"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
 
+	"github.com/MaximPolyaev/gofermart/internal/adapters/accrual"
 	"github.com/MaximPolyaev/gofermart/internal/adapters/router"
 	"github.com/MaximPolyaev/gofermart/internal/adapters/storage"
 	"github.com/MaximPolyaev/gofermart/internal/config"
@@ -15,41 +16,90 @@ import (
 	"github.com/MaximPolyaev/gofermart/internal/usecases/balanceusecase"
 	"github.com/MaximPolyaev/gofermart/internal/usecases/ordersusecase"
 	"github.com/MaximPolyaev/gofermart/internal/usecases/userusecase"
+	"github.com/MaximPolyaev/gofermart/internal/utils/logger"
+	"github.com/sirupsen/logrus"
 )
 
 func main() {
-	cfg := config.New()
-	if err := cfg.Parse(); err != nil {
-		log.Fatal(err)
-	}
+	log := logger.New(os.Stdout)
 
-	db, err := dbconn.InitDB(*cfg.DatabaseURI)
+	err := run(context.Background(), log)
 	if err != nil {
 		log.Fatal(err)
 	}
+}
 
-	store := storage.New(db)
+func run(ctx context.Context, log *logger.Logger) error {
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	cfg := config.New()
+	if err := cfg.Parse(); err != nil {
+		return err
+	}
+
+	log.WithFields(logrus.Fields{
+		"uri": *cfg.DatabaseURI,
+	}).Info("init db connection")
+
+	db, err := dbconn.InitDB(*cfg.DatabaseURI)
+	if err != nil {
+		return err
+	}
+
+	store := storage.New(db, log)
+
+	log.WithFields(logrus.Fields{
+		"address": *cfg.AccrualSystemAddress,
+	}).Info("init accrual adapter")
 
 	accrualAdapter := accrual.New(*cfg.AccrualSystemAddress)
 
-	ordersUseCase := ordersusecase.New(store, accrualAdapter)
+	updateOrdersCh := make(chan string, 100)
+	shutdownHandler(cancel, updateOrdersCh, log)
+
+	ordersUseCase := ordersusecase.New(store, accrualAdapter, updateOrdersCh, log)
+
+	go ordersUseCase.StartSyncOrdersStatusesProcess(ctx)
+
+	err = ordersUseCase.UpUpdateOrdersPool(ctx)
+	if err != nil {
+		return err
+	}
 
 	rtr := router.New(
 		router.WithAuthUseCase(authusecase.New(store)),
 		router.WithOrdersUseCase(ordersUseCase),
 		router.WithUserUseCase(userusecase.New(store)),
 		router.WithBalanceUseCase(balanceusecase.New(store)),
-	)
+	).Configure()
 
-	rtr.Configure()
+	log.WithFields(logrus.Fields{
+		"address": *cfg.RunAddress,
+	}).Info("start server")
 
-	err = ordersUseCase.StartUpdateOrdersProcess(context.Background())
+	err = http.ListenAndServe(*cfg.RunAddress, rtr)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
-	fmt.Println("start server on", *cfg.RunAddress)
-	if err := http.ListenAndServe(*cfg.RunAddress, rtr); err != nil {
-		log.Fatal(err)
-	}
+	return nil
+}
+
+func shutdownHandler(cancel context.CancelFunc, updateOrdersCh chan<- string, log *logger.Logger) {
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+
+	go func() {
+		sig := <-sigs
+
+		log.WithFields(logrus.Fields{
+			"signal": sig,
+		}).Info("kill process")
+
+		close(updateOrdersCh)
+		cancel()
+
+		os.Exit(0)
+	}()
 }

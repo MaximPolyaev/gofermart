@@ -5,12 +5,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
-	"net/http"
-	"time"
-
 	"github.com/MaximPolyaev/gofermart/internal/entities"
 	"github.com/cenkalti/backoff/v4"
+	"io"
+	"net/http"
 )
 
 const requestAttemptsCount = 15
@@ -41,7 +39,7 @@ func (c *HTTPClient) FetchAccrualOrder(ctx context.Context, number string) (*ent
 	}
 
 	if resp.StatusCode == http.StatusNoContent {
-		return nil, errors.New("orders is not registered " + time.Now().String())
+		return nil, errors.New("order is not registered")
 	}
 
 	if resp.StatusCode == http.StatusTooManyRequests {

@@ -27,7 +27,7 @@ func New(useCases ...func(r *Router)) *Router {
 	return router
 }
 
-func (r *Router) Configure() {
+func (r *Router) Configure() *Router {
 	r.Use(
 		middleware.Logger,
 		middleware.StripSlashes,
@@ -42,4 +42,6 @@ func (r *Router) Configure() {
 	r.Get("/api/user/balance", r.getBalance())
 	r.Post("/api/user/balance/withdraw", r.withdraw())
 	r.Get("/api/user/withdrawals", r.withdrawInfo())
+
+	return r
 }

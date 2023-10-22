@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"fmt"
 	"time"
 
 	"github.com/MaximPolyaev/gofermart/internal/entities"
@@ -92,10 +91,11 @@ ORDER BY t.created_at
 		if rows != nil {
 			err := rows.Close()
 			if err != nil {
-				fmt.Println("rows close", err)
+				s.log.Error(err)
 			}
 		}
 	}()
+
 	if err != nil {
 		return nil, err
 	}
@@ -153,7 +153,7 @@ WHERE status IN ($1, $2)
 		if rows != nil {
 			err := rows.Close()
 			if err != nil {
-				fmt.Println("rows close", err)
+				s.log.Error(err)
 			}
 		}
 	}()
