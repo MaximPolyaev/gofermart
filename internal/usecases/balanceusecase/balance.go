@@ -2,13 +2,13 @@ package balanceusecase
 
 import (
 	"context"
+	"database/sql"
 
 	"github.com/MaximPolyaev/gofermart/internal/entities"
 )
 
 type BalanceUseCase struct {
 	storage storage
-	mutex   mutex
 }
 
 type storage interface {
@@ -16,27 +16,19 @@ type storage interface {
 	CreatePointsOperation(ctx context.Context, orderID int, userID int, points float64) error
 	FindOrderIDByNumber(ctx context.Context, number string) (int, error)
 	FindWroteOffs(ctx context.Context, userID int) ([]entities.WroteOff, error)
+	UserLock(ctx context.Context, userID int) (*sql.Tx, error)
 }
 
-type mutex interface {
-	Lock(val int)
-	Unlock(val int)
+func New(storage storage) *BalanceUseCase {
+	return &BalanceUseCase{storage: storage}
 }
 
-func New(storage storage, mutex mutex) *BalanceUseCase {
-	return &BalanceUseCase{storage: storage, mutex: mutex}
+func (uc *BalanceUseCase) UserLock(ctx context.Context, userID int) (*sql.Tx, error) {
+	return uc.storage.UserLock(ctx, userID)
 }
 
 func (uc *BalanceUseCase) GetBalance(ctx context.Context, userID int) (*entities.UserBalance, error) {
 	return uc.storage.FindBalanceByUserID(ctx, userID)
-}
-
-func (uc *BalanceUseCase) LockUser(userID int) {
-	uc.mutex.Lock(userID)
-}
-
-func (uc *BalanceUseCase) UnlockUser(userID int) {
-	uc.mutex.Unlock(userID)
 }
 
 func (uc *BalanceUseCase) IsAvailableWriteOff(ctx context.Context, writeOff *entities.WriteOff, userID int) (bool, error) {

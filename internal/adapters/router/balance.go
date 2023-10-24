@@ -2,11 +2,11 @@ package router
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
+	"github.com/MaximPolyaev/gofermart/internal/entities"
 	"io"
 	"net/http"
-
-	"github.com/MaximPolyaev/gofermart/internal/entities"
 )
 
 type balanceUseCase interface {
@@ -14,8 +14,7 @@ type balanceUseCase interface {
 	IsAvailableWriteOff(ctx context.Context, writeOff *entities.WriteOff, userID int) (bool, error)
 	WriteOff(ctx context.Context, off entities.WriteOff, userID int) error
 	GetWroteOffs(ctx context.Context, userID int) ([]entities.WroteOff, error)
-	LockUser(userID int)
-	UnlockUser(userID int)
+	UserLock(ctx context.Context, userID int) (*sql.Tx, error)
 }
 
 func WithBalanceUseCase(balance balanceUseCase) func(r *Router) {
@@ -116,8 +115,18 @@ func (r *Router) withdraw() http.HandlerFunc {
 			return
 		}
 
-		r.balance.LockUser(userID)
-		defer r.balance.UnlockUser(userID)
+		tx, err := r.balance.UserLock(rctx, userID)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		defer func() {
+			err := tx.Rollback()
+			if err != nil {
+				r.log.Info(err)
+			}
+		}()
 
 		isAvailableWriteOff, err := r.balance.IsAvailableWriteOff(rctx, &writeOff, userID)
 		if err != nil {

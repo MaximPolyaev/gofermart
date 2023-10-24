@@ -95,6 +95,20 @@ ORDER BY t.created_at
 	return wroteOffs, nil
 }
 
+func (s *Storage) UserLock(ctx context.Context, userID int) (*sql.Tx, error) {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = tx.ExecContext(ctx, "INSERT INTO user_lock (user_id) VALUES ($1)", userID)
+	if err != nil {
+		return nil, s.rollback(tx, err)
+	}
+
+	return tx, nil
+}
+
 func (s *Storage) createPointsOperation(ctx context.Context, ex execCtx, orderID int, userID int, points float64) error {
 	q := `INSERT INTO reg_points_balance (order_id, user_id, points) VALUES ($1, $2, $3)`
 
