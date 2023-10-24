@@ -148,6 +148,7 @@ func (s *Storage) FindOrderNumbersToUpdateAccruals(ctx context.Context) ([]strin
 SELECT number
 FROM doc_order
 WHERE status IN ($1, $2)
+LIMIT 30
 `
 
 	rows, err := s.db.QueryContext(ctx, q, orderstatus.NEW, orderstatus.PROCESSING)
