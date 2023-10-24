@@ -37,7 +37,7 @@ func (s *Storage) CreateOrder(ctx context.Context, number string, userID int) er
 
 func (s *Storage) SaveOrder(ctx context.Context, order *entities.Order) error {
 	if order.Accrual == 0 {
-		return s.ChangeOrderStatus(ctx, order.Number, order.Status)
+		return s.ChangeOrderStatus(ctx, order.Number, order.Status, nil)
 	}
 
 	orderID, err := s.FindOrderIDByNumber(ctx, order.Number)
@@ -55,14 +55,16 @@ func (s *Storage) SaveOrder(ctx context.Context, order *entities.Order) error {
 		return err
 	}
 
-	err = s.changeOrderStatus(ctx, tx, order.Number, order.Status)
+	err = s.ChangeOrderStatus(ctx, order.Number, order.Status, tx)
 	if err != nil {
-		return s.rollback(tx, err)
+		return s.Rollback(tx, err)
 	}
 
-	err = s.createPointsOperation(ctx, tx, orderID, userID, order.Accrual)
+	q := `INSERT INTO reg_points_balance (order_id, user_id, points) VALUES ($1, $2, $3)`
+
+	_, err = tx.ExecContext(ctx, q, orderID, userID, order.Accrual)
 	if err != nil {
-		return s.rollback(tx, err)
+		return s.Rollback(tx, err)
 	}
 
 	err = tx.Commit()
@@ -181,24 +183,26 @@ WHERE status IN ($1, $2)
 	return orders, nil
 }
 
-func (s *Storage) ChangeOrderStatus(ctx context.Context, number string, status orderstatus.OrderStatus) error {
-	return s.changeOrderStatus(ctx, s.db, number, status)
-}
-
-func (s *Storage) changeOrderStatus(
+func (s *Storage) ChangeOrderStatus(
 	ctx context.Context,
-	ex execCtx,
 	number string,
 	status orderstatus.OrderStatus,
+	tx *sql.Tx,
 ) error {
 	q := `UPDATE doc_order SET status = $1, changed_at = now() WHERE number = $2`
 
-	_, err := ex.ExecContext(ctx, q, status, number)
+	var err error
+
+	if tx != nil {
+		_, err = tx.ExecContext(ctx, q, status, number)
+	} else {
+		_, err = s.db.ExecContext(ctx, q, status, number)
+	}
 
 	return err
 }
 
-func (s *Storage) rollback(tx *sql.Tx, err error) error {
+func (s *Storage) Rollback(tx *sql.Tx, err error) error {
 	txErr := tx.Rollback()
 	if txErr != nil {
 		return txErr

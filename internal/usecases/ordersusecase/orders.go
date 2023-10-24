@@ -9,18 +9,16 @@ import (
 )
 
 type OrdersUseCase struct {
-	storage        storage
-	accrual        accrual
-	updateOrdersCh chan string
-	log            logger
+	storage storage
+	accrual accrual
+	log     logger
 }
 
-func New(storage storage, accrual accrual, updateOrdersCh chan string, log logger) *OrdersUseCase {
+func New(storage storage, accrual accrual, log logger) *OrdersUseCase {
 	return &OrdersUseCase{
-		storage:        storage,
-		accrual:        accrual,
-		updateOrdersCh: updateOrdersCh,
-		log:            log,
+		storage: storage,
+		accrual: accrual,
+		log:     log,
 	}
 }
 
@@ -33,8 +31,6 @@ func (uc *OrdersUseCase) CreateOrder(ctx context.Context, number string, userID 
 	if err != nil {
 		return err
 	}
-
-	uc.updateOrdersCh <- number
 
 	return nil
 }

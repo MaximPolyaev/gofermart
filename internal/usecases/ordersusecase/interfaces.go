@@ -2,6 +2,7 @@ package ordersusecase
 
 import (
 	"context"
+	"database/sql"
 
 	"github.com/MaximPolyaev/gofermart/internal/entities"
 	"github.com/MaximPolyaev/gofermart/internal/enums/orderstatus"
@@ -13,7 +14,7 @@ type storage interface {
 	SaveOrder(ctx context.Context, order *entities.Order) error
 	FindOrdersByUserID(ctx context.Context, userID int) ([]entities.Order, error)
 	FindOrderNumbersToUpdateAccruals(ctx context.Context) ([]string, error)
-	ChangeOrderStatus(ctx context.Context, number string, status orderstatus.OrderStatus) error
+	ChangeOrderStatus(ctx context.Context, number string, status orderstatus.OrderStatus, tx *sql.Tx) error
 }
 
 type accrual interface {

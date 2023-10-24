@@ -55,24 +55,17 @@ func run(ctx context.Context, log *logger.Logger) error {
 
 	accrualAdapter := accrual.New(*cfg.AccrualSystemAddress)
 
-	updateOrdersCh := make(chan string, 100)
-	shutdownHandler(cancel, updateOrdersCh, log)
+	shutdownHandler(cancel, log)
 
-	ordersUseCase := ordersusecase.New(store, accrualAdapter, updateOrdersCh, log)
+	ordersUseCase := ordersusecase.New(store, accrualAdapter, log)
 
 	go ordersUseCase.StartSyncOrdersStatusesProcess(ctx)
 
-	err = ordersUseCase.UpUpdateOrdersPool(ctx)
-	if err != nil {
-		return err
-	}
-
 	rtr := router.New(
-		log,
 		router.WithAuthUseCase(authusecase.New(store)),
 		router.WithOrdersUseCase(ordersUseCase),
 		router.WithUserUseCase(userusecase.New(store)),
-		router.WithBalanceUseCase(balanceusecase.New(store)),
+		router.WithBalanceUseCase(balanceusecase.New(store, log)),
 	).Configure()
 
 	log.WithFields(logrus.Fields{
@@ -87,7 +80,7 @@ func run(ctx context.Context, log *logger.Logger) error {
 	return nil
 }
 
-func shutdownHandler(cancel context.CancelFunc, updateOrdersCh chan<- string, log *logger.Logger) {
+func shutdownHandler(cancel context.CancelFunc, log *logger.Logger) {
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 
@@ -98,7 +91,6 @@ func shutdownHandler(cancel context.CancelFunc, updateOrdersCh chan<- string, lo
 			"signal": sig,
 		}).Info("kill process")
 
-		close(updateOrdersCh)
 		cancel()
 
 		os.Exit(0)

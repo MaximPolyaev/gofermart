@@ -9,19 +9,41 @@ import (
 	"github.com/MaximPolyaev/gofermart/internal/entities"
 )
 
-func (s *Storage) FindBalanceByUserID(ctx context.Context, userID int) (*entities.UserBalance, error) {
-	var balance entities.UserBalance
+func (s *Storage) LockUserWithCreateTx(ctx context.Context, userID int) (*sql.Tx, error) {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
 
+	q := `SELECT id FROM ref_user WHERE id = $1 FOR UPDATE`
+
+	_, err = tx.ExecContext(ctx, q, userID)
+	if err != nil {
+		return nil, s.Rollback(tx, err)
+	}
+
+	return tx, nil
+}
+
+func (s *Storage) FindBalanceByUserID(ctx context.Context, tx *sql.Tx, userID int) (*entities.UserBalance, error) {
 	q := `
 SELECT sum(t.points) as current, sum(case when t.points < 0 then -1 * t.points else 0 end) as withdrawn
 FROM reg_points_balance t
 WHERE t.user_id = $1
 `
-
+	var balance entities.UserBalance
 	var current sql.NullFloat64
 	var withdrawn sql.NullFloat64
+	var row *sql.Row
 
-	err := s.db.QueryRowContext(ctx, q, userID).Scan(&current, &withdrawn)
+	if tx == nil {
+		row = s.db.QueryRowContext(ctx, q, userID)
+	} else {
+		row = tx.QueryRowContext(ctx, q, userID)
+	}
+
+	err := row.Scan(&current, &withdrawn)
+
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return &balance, nil
@@ -39,10 +61,6 @@ WHERE t.user_id = $1
 	}
 
 	return &balance, nil
-}
-
-func (s *Storage) CreatePointsOperation(ctx context.Context, orderID int, userID int, points float64) error {
-	return s.createPointsOperation(ctx, s.db, orderID, userID, points)
 }
 
 func (s *Storage) FindWroteOffs(ctx context.Context, userID int) ([]entities.WroteOff, error) {
@@ -95,27 +113,13 @@ ORDER BY t.created_at
 	return wroteOffs, nil
 }
 
-func (s *Storage) UserLock(ctx context.Context, userID int) (*sql.Tx, error) {
-	tx, err := s.db.BeginTx(ctx, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	_, err = tx.ExecContext(ctx, "INSERT INTO user_lock (user_id) VALUES ($1)", userID)
-	if err != nil {
-		return nil, s.rollback(tx, err)
-	}
-
-	return tx, nil
-}
-
-func (s *Storage) createPointsOperation(ctx context.Context, ex execCtx, orderID int, userID int, points float64) error {
+func (s *Storage) WriteOffWithCommit(ctx context.Context, tx *sql.Tx, orderID int, userID int, points float64) error {
 	q := `INSERT INTO reg_points_balance (order_id, user_id, points) VALUES ($1, $2, $3)`
 
-	_, err := ex.ExecContext(ctx, q, orderID, userID, points)
+	_, err := tx.ExecContext(ctx, q, orderID, userID, -1*points)
 	if err != nil {
-		return err
+		return s.Rollback(tx, err)
 	}
 
-	return nil
+	return tx.Commit()
 }

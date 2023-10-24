@@ -9,23 +9,17 @@ import (
 
 type Router struct {
 	*chi.Mux
-	log     logger
 	auth    authUseCase
 	orders  ordersUseCase
 	user    userUseCase
 	balance balanceUseCase
 }
 
-type logger interface {
-	Info(args ...interface{})
-}
-
-func New(log logger, useCases ...func(r *Router)) *Router {
+func New(useCases ...func(r *Router)) *Router {
 	mux := chi.NewRouter()
 
 	router := &Router{
 		Mux: mux,
-		log: log,
 	}
 
 	for _, uc := range useCases {

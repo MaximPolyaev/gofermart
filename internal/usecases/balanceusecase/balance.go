@@ -3,50 +3,57 @@ package balanceusecase
 import (
 	"context"
 	"database/sql"
-
 	"github.com/MaximPolyaev/gofermart/internal/entities"
+	"github.com/MaximPolyaev/gofermart/internal/errors/balanceerrors"
 )
 
 type BalanceUseCase struct {
 	storage storage
+	log     logger
 }
 
 type storage interface {
-	FindBalanceByUserID(ctx context.Context, userID int) (*entities.UserBalance, error)
-	CreatePointsOperation(ctx context.Context, orderID int, userID int, points float64) error
+	FindBalanceByUserID(ctx context.Context, tx *sql.Tx, userID int) (*entities.UserBalance, error)
 	FindOrderIDByNumber(ctx context.Context, number string) (int, error)
+	WriteOffWithCommit(ctx context.Context, tx *sql.Tx, orderID int, userID int, points float64) error
 	FindWroteOffs(ctx context.Context, userID int) ([]entities.WroteOff, error)
-	UserLock(ctx context.Context, userID int) (*sql.Tx, error)
+	LockUserWithCreateTx(ctx context.Context, userID int) (*sql.Tx, error)
+	Rollback(tx *sql.Tx, err error) error
 }
 
-func New(storage storage) *BalanceUseCase {
-	return &BalanceUseCase{storage: storage}
+type logger interface {
+	Error(args ...interface{})
 }
 
-func (uc *BalanceUseCase) UserLock(ctx context.Context, userID int) (*sql.Tx, error) {
-	return uc.storage.UserLock(ctx, userID)
+func New(storage storage, log logger) *BalanceUseCase {
+	return &BalanceUseCase{storage: storage, log: log}
 }
 
 func (uc *BalanceUseCase) GetBalance(ctx context.Context, userID int) (*entities.UserBalance, error) {
-	return uc.storage.FindBalanceByUserID(ctx, userID)
+	return uc.storage.FindBalanceByUserID(ctx, nil, userID)
 }
 
-func (uc *BalanceUseCase) IsAvailableWriteOff(ctx context.Context, writeOff *entities.WriteOff, userID int) (bool, error) {
-	balance, err := uc.storage.FindBalanceByUserID(ctx, userID)
-	if err != nil {
-		return false, err
-	}
-
-	return balance.Current > 0 && balance.Current >= writeOff.Sum, nil
-}
-
-func (uc *BalanceUseCase) WriteOff(ctx context.Context, off entities.WriteOff, userID int) error {
-	orderID, err := uc.storage.FindOrderIDByNumber(ctx, off.Order)
+func (uc *BalanceUseCase) WriteOff(ctx context.Context, writeOff entities.WriteOff, userID int) error {
+	orderID, err := uc.storage.FindOrderIDByNumber(ctx, writeOff.Order)
 	if err != nil {
 		return err
 	}
 
-	return uc.storage.CreatePointsOperation(ctx, orderID, userID, -1*off.Sum)
+	tx, err := uc.storage.LockUserWithCreateTx(ctx, userID)
+	if err != nil {
+		return err
+	}
+
+	balance, err := uc.storage.FindBalanceByUserID(ctx, tx, userID)
+	if err != nil {
+		return uc.storage.Rollback(tx, err)
+	}
+
+	if balance.Current <= 0 || balance.Current < writeOff.Sum {
+		return uc.storage.Rollback(tx, balanceerrors.ErrInsufficientFunds)
+	}
+
+	return uc.storage.WriteOffWithCommit(ctx, tx, orderID, userID, writeOff.Sum)
 }
 
 func (uc *BalanceUseCase) GetWroteOffs(ctx context.Context, userID int) ([]entities.WroteOff, error) {

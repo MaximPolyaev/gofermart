@@ -2,19 +2,18 @@ package router
 
 import (
 	"context"
-	"database/sql"
 	"encoding/json"
+	"errors"
 	"github.com/MaximPolyaev/gofermart/internal/entities"
+	"github.com/MaximPolyaev/gofermart/internal/errors/balanceerrors"
 	"io"
 	"net/http"
 )
 
 type balanceUseCase interface {
 	GetBalance(ctx context.Context, userID int) (*entities.UserBalance, error)
-	IsAvailableWriteOff(ctx context.Context, writeOff *entities.WriteOff, userID int) (bool, error)
 	WriteOff(ctx context.Context, off entities.WriteOff, userID int) error
 	GetWroteOffs(ctx context.Context, userID int) ([]entities.WroteOff, error)
-	UserLock(ctx context.Context, userID int) (*sql.Tx, error)
 }
 
 func WithBalanceUseCase(balance balanceUseCase) func(r *Router) {
@@ -115,33 +114,14 @@ func (r *Router) withdraw() http.HandlerFunc {
 			return
 		}
 
-		tx, err := r.balance.UserLock(rctx, userID)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		defer func() {
-			err := tx.Rollback()
-			if err != nil {
-				r.log.Info(err)
-			}
-		}()
-
-		isAvailableWriteOff, err := r.balance.IsAvailableWriteOff(rctx, &writeOff, userID)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		if !isAvailableWriteOff {
-			http.Error(w, "insufficient funds", http.StatusPaymentRequired)
-			return
-		}
-
 		err = r.balance.WriteOff(rctx, writeOff, userID)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			statusCode := http.StatusInternalServerError
+			if errors.Is(err, balanceerrors.ErrInsufficientFunds) {
+				statusCode = http.StatusPaymentRequired
+			}
+
+			http.Error(w, err.Error(), statusCode)
 			return
 		}
 

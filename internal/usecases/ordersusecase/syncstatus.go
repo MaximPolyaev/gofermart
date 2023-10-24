@@ -22,43 +22,36 @@ func (uc *OrdersUseCase) StartSyncOrdersStatusesProcess(ctx context.Context) {
 		select {
 		case <-ctx.Done():
 			return
-		case orderNumber := <-uc.updateOrdersCh:
-			select {
-			case <-ctx.Done():
-				return
-			case <-tick.C:
+		case <-tick.C:
+			orderNumbers, err := uc.storage.FindOrderNumbersToUpdateAccruals(ctx)
+			if err != nil {
+				uc.log.Error(err)
+				continue
+			}
+
+			for _, orderNumber := range orderNumbers {
 				err := uc.updateOrderAccruals(ctx, orderNumber)
-				if err != nil {
-					uc.log.Error(fmt.Errorf("update accruals %s: %s", orderNumber, err))
 
-					if errors.Is(err, accrualerrors.ErrRateLimit) {
-						tickerDuration *= 2
-						tick.Reset(tickerDuration)
-						uc.log.Info(fmt.Sprintf("increase ticker to %d", tickerDuration/time.Second))
-					}
+				if err == nil {
+					continue
+				}
 
-					uc.updateOrdersCh <- orderNumber
+				uc.log.Error(fmt.Errorf("update accruals %s: %s", orderNumber, err))
+
+				if errors.Is(err, accrualerrors.ErrRateLimit) {
+					tickerDuration *= 2
+					tick.Reset(tickerDuration)
+					uc.log.Info(fmt.Sprintf("increase ticker to %d", tickerDuration/time.Second))
+
+					break
 				}
 			}
 		}
 	}
 }
 
-func (uc *OrdersUseCase) UpUpdateOrdersPool(ctx context.Context) error {
-	orderNumbers, err := uc.storage.FindOrderNumbersToUpdateAccruals(ctx)
-	if err != nil {
-		return err
-	}
-
-	for _, orderNumber := range orderNumbers {
-		uc.updateOrdersCh <- orderNumber
-	}
-
-	return nil
-}
-
 func (uc *OrdersUseCase) updateOrderAccruals(ctx context.Context, number string) error {
-	err := uc.storage.ChangeOrderStatus(ctx, number, orderstatus.PROCESSING)
+	err := uc.storage.ChangeOrderStatus(ctx, number, orderstatus.PROCESSING, nil)
 	if err != nil {
 		return err
 	}
@@ -74,10 +67,6 @@ func (uc *OrdersUseCase) updateOrderAccruals(ctx context.Context, number string)
 		if err != nil {
 			return err
 		}
-	}
-
-	if accrualOrder.IsNeedGetAccruals() {
-		uc.updateOrdersCh <- number
 	}
 
 	return nil
