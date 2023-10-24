@@ -23,19 +23,22 @@ func (uc *OrdersUseCase) StartSyncOrdersStatusesProcess(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case orderNumber := <-uc.updateOrdersCh:
-			<-tick.C
+			select {
+			case <-ctx.Done():
+				return
+			case <-tick.C:
+				err := uc.updateOrderAccruals(ctx, orderNumber)
+				if err != nil {
+					uc.log.Error(fmt.Errorf("update accruals %s: %s", orderNumber, err))
 
-			err := uc.updateOrderAccruals(ctx, orderNumber)
-			if err != nil {
-				uc.log.Error(fmt.Errorf("update accruals %s: %s", orderNumber, err))
+					if errors.Is(err, accrualerrors.ErrRateLimit) {
+						tickerDuration *= 2
+						tick.Reset(tickerDuration)
+						uc.log.Info(fmt.Sprintf("increase ticker to %d", tickerDuration/time.Second))
+					}
 
-				if errors.Is(err, accrualerrors.ErrRateLimit) {
-					tickerDuration *= 2
-					tick.Reset(tickerDuration)
-					uc.log.Info(fmt.Sprintf("increase ticker to %d", tickerDuration/time.Second))
+					uc.updateOrdersCh <- orderNumber
 				}
-
-				uc.updateOrdersCh <- orderNumber
 			}
 		}
 	}
