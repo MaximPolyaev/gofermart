@@ -4,7 +4,6 @@ go 1.21
 
 require (
 	github.com/caarlos0/env/v9 v9.0.0
-	github.com/cenkalti/backoff/v4 v4.2.1
 	github.com/go-chi/chi/v5 v5.0.10
 	github.com/golang-jwt/jwt/v5 v5.0.0
 	github.com/jackc/pgx v3.6.2+incompatible

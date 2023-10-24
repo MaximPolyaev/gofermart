@@ -2,23 +2,43 @@ package ordersusecase
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
 	"github.com/MaximPolyaev/gofermart/internal/entities"
 	"github.com/MaximPolyaev/gofermart/internal/enums/accrualstatus"
 	"github.com/MaximPolyaev/gofermart/internal/enums/orderstatus"
+	"github.com/MaximPolyaev/gofermart/internal/errors/accrualerrors"
 )
 
-const updateOrderAccrualsDelay = time.Millisecond * 500
-
 func (uc *OrdersUseCase) StartSyncOrdersStatusesProcess(ctx context.Context) {
+	tickerDuration := time.Second
+
+	tick := time.NewTicker(tickerDuration)
+	defer tick.Stop()
+
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		case orderNumber := <-uc.updateOrdersCh:
-			uc.updateOrderAccrualsWithDelay(ctx, orderNumber)
+			for range tick.C {
+				err := uc.updateOrderAccruals(ctx, orderNumber)
+				if err != nil {
+					uc.log.Error(fmt.Errorf("update accruals %s: %s", orderNumber, err))
+
+					if errors.Is(err, accrualerrors.ErrRateLimit) {
+						tickerDuration *= 2
+						tick.Reset(tickerDuration)
+						uc.log.Info(fmt.Sprintf("increase ticker to %d", tickerDuration/time.Second))
+					}
+
+					uc.updateOrdersCh <- orderNumber
+				}
+
+				break
+			}
 		}
 	}
 }
@@ -36,37 +56,6 @@ func (uc *OrdersUseCase) UpUpdateOrdersPool(ctx context.Context) error {
 	return nil
 }
 
-func (uc *OrdersUseCase) orderProcessWorker(ctx context.Context) {
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case orderNumber := <-uc.updateOrdersCh:
-			uc.updateOrderAccrualsWithDelay(ctx, orderNumber)
-		}
-	}
-}
-
-func (uc *OrdersUseCase) updateOrderAccrualsWithDelay(ctx context.Context, orderNumber string) {
-	tick := time.NewTicker(updateOrderAccrualsDelay)
-	defer tick.Stop()
-
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case <-tick.C:
-			err := uc.updateOrderAccruals(ctx, orderNumber)
-			if err != nil {
-				uc.log.Error(err)
-
-				uc.updateOrdersCh <- orderNumber
-			}
-			return
-		}
-	}
-}
-
 func (uc *OrdersUseCase) updateOrderAccruals(ctx context.Context, number string) error {
 	err := uc.storage.ChangeOrderStatus(ctx, number, orderstatus.PROCESSING)
 	if err != nil {
@@ -75,7 +64,7 @@ func (uc *OrdersUseCase) updateOrderAccruals(ctx context.Context, number string)
 
 	accrualOrder, err := uc.accrual.FetchAccrualOrder(ctx, number)
 	if err != nil {
-		return fmt.Errorf("fetch accrual %s: %s", number, err)
+		return err
 	}
 
 	order := uc.orderStatusByAccrualStatus(accrualOrder)

@@ -5,13 +5,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/MaximPolyaev/gofermart/internal/entities"
-	"github.com/cenkalti/backoff/v4"
 	"io"
 	"net/http"
-)
 
-const requestAttemptsCount = 15
+	"github.com/MaximPolyaev/gofermart/internal/entities"
+	"github.com/MaximPolyaev/gofermart/internal/errors/accrualerrors"
+)
 
 type HTTPClient struct {
 	client  *http.Client
@@ -33,7 +32,7 @@ func (c *HTTPClient) FetchAccrualOrder(ctx context.Context, number string) (*ent
 		return nil, err
 	}
 
-	resp, err := c.repeatableDo(req)
+	resp, err := c.client.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -43,7 +42,7 @@ func (c *HTTPClient) FetchAccrualOrder(ctx context.Context, number string) (*ent
 	}
 
 	if resp.StatusCode == http.StatusTooManyRequests {
-		return nil, fmt.Errorf("status many reqs")
+		return nil, accrualerrors.ErrRateLimit
 	}
 
 	if resp.StatusCode != http.StatusOK {
@@ -66,30 +65,4 @@ func (c *HTTPClient) FetchAccrualOrder(ctx context.Context, number string) (*ent
 	}
 
 	return &accrualOrder, nil
-}
-
-func (c *HTTPClient) repeatableDo(r *http.Request) (*http.Response, error) {
-	ticker := backoff.NewTicker(backoff.NewExponentialBackOff())
-
-	var resp *http.Response
-	var err error
-
-	attempts := 0
-	for range ticker.C {
-		attempts++
-
-		resp, err = c.client.Do(r)
-		if err != nil {
-			return nil, err
-		}
-
-		if resp.StatusCode == http.StatusTooManyRequests && requestAttemptsCount > attempts {
-			continue
-		}
-
-		ticker.Stop()
-		break
-	}
-
-	return resp, err
 }

@@ -22,4 +22,5 @@ type accrual interface {
 
 type logger interface {
 	Error(args ...interface{})
+	Info(args ...interface{})
 }
