@@ -18,33 +18,45 @@ func (uc *OrdersUseCase) StartSyncOrdersStatusesProcess(ctx context.Context) {
 	tick := time.NewTicker(tickerDuration)
 	defer tick.Stop()
 
+	var orderNumbers []string
+
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		case <-tick.C:
-			orderNumbers, err := uc.storage.FindOrderNumbersToUpdateAccruals(ctx)
-			if err != nil {
-				uc.log.Error(err)
-				continue
-			}
+			var err error
 
-			for _, orderNumber := range orderNumbers {
-				err := uc.updateOrderAccruals(ctx, orderNumber)
-
-				if err == nil {
+			if len(orderNumbers) == 0 {
+				orderNumbers, err = uc.storage.FindOrderNumbersToUpdateAccruals(ctx)
+				if err != nil {
+					uc.log.Error(err)
 					continue
 				}
 
-				uc.log.Error(fmt.Errorf("update accruals %s: %s", orderNumber, err))
-
-				if errors.Is(err, accrualerrors.ErrRateLimit) {
-					tickerDuration *= 2
-					tick.Reset(tickerDuration)
-					uc.log.Info(fmt.Sprintf("increase ticker to %d", tickerDuration/time.Second))
-
-					break
+				if len(orderNumbers) == 0 {
+					continue
 				}
+			}
+
+			orderNumber := orderNumbers[0]
+
+			err = uc.updateOrderAccruals(ctx, orderNumber)
+			if err != nil {
+				if len(orderNumbers) == 1 {
+					orderNumbers = make([]string, 0)
+					continue
+				}
+				orderNumbers = orderNumbers[1:]
+				continue
+			}
+
+			uc.log.Error(fmt.Errorf("update accruals %s: %s", orderNumber, err))
+
+			if errors.Is(err, accrualerrors.ErrRateLimit) {
+				tickerDuration *= 2
+				tick.Reset(tickerDuration)
+				uc.log.Info(fmt.Sprintf("increase ticker to %d", tickerDuration/time.Second))
 			}
 		}
 	}
