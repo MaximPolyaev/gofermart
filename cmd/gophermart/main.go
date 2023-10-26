@@ -12,6 +12,7 @@ import (
 	"github.com/MaximPolyaev/gofermart/internal/adapters/storage"
 	"github.com/MaximPolyaev/gofermart/internal/config"
 	"github.com/MaximPolyaev/gofermart/internal/dbconn"
+	"github.com/MaximPolyaev/gofermart/internal/usecases/accrualusecase"
 	"github.com/MaximPolyaev/gofermart/internal/usecases/authusecase"
 	"github.com/MaximPolyaev/gofermart/internal/usecases/balanceusecase"
 	"github.com/MaximPolyaev/gofermart/internal/usecases/ordersusecase"
@@ -53,17 +54,16 @@ func run(ctx context.Context, log *logger.Logger) error {
 		"address": *cfg.AccrualSystemAddress,
 	}).Info("init accrual adapter")
 
-	accrualAdapter := accrual.New(*cfg.AccrualSystemAddress)
-
 	shutdownHandler(cancel, log)
 
-	ordersUseCase := ordersusecase.New(store, accrualAdapter, log)
+	accrualAdapter := accrual.New(*cfg.AccrualSystemAddress, log)
+	accrualUseCase := accrualusecase.New(accrualAdapter, store, log)
 
-	go ordersUseCase.StartSyncOrdersStatusesProcess(ctx)
+	go accrualUseCase.StartSyncOrdersStatusesProcess(ctx)
 
 	rtr := router.New(
 		router.WithAuthUseCase(authusecase.New(store)),
-		router.WithOrdersUseCase(ordersUseCase),
+		router.WithOrdersUseCase(ordersusecase.New(store)),
 		router.WithUserUseCase(userusecase.New(store)),
 		router.WithBalanceUseCase(balanceusecase.New(store, log)),
 	).Configure()

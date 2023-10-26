@@ -1,7 +1,8 @@
-package ordersusecase
+package accrualusecase
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"time"
@@ -12,19 +13,54 @@ import (
 	"github.com/MaximPolyaev/gofermart/internal/errors/accrualerrors"
 )
 
-func (uc *OrdersUseCase) StartSyncOrdersStatusesProcess(ctx context.Context) {
-	tickerDuration := time.Second
+const fetchAccrualsInterval = time.Second
 
-	tick := time.NewTicker(tickerDuration)
+type AccrualsUseCase struct {
+	accrual accrual
+	storage storage
+	log     logger
+}
+
+type accrual interface {
+	FetchAccrualOrder(ctx context.Context, number string) (*entities.AccrualOrder, error)
+}
+
+type logger interface {
+	Error(args ...interface{})
+	Info(args ...interface{})
+}
+
+type storage interface {
+	FindOrderNumbersToUpdateAccruals(ctx context.Context) ([]string, error)
+	ChangeOrderStatus(ctx context.Context, number string, status orderstatus.OrderStatus, tx *sql.Tx) error
+	SaveOrder(ctx context.Context, order *entities.Order) error
+}
+
+func New(accrual accrual, storage storage, log logger) *AccrualsUseCase {
+	return &AccrualsUseCase{
+		accrual: accrual,
+		storage: storage,
+		log:     log,
+	}
+}
+
+func (uc *AccrualsUseCase) StartSyncOrdersStatusesProcess(ctx context.Context) {
+	tick := time.NewTicker(fetchAccrualsInterval)
 	defer tick.Stop()
 
 	var orderNumbers []string
+	var isErrTick bool
 
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		case <-tick.C:
+			if isErrTick {
+				isErrTick = false
+				tick.Reset(fetchAccrualsInterval)
+			}
+
 			var err error
 
 			if len(orderNumbers) == 0 {
@@ -42,7 +78,7 @@ func (uc *OrdersUseCase) StartSyncOrdersStatusesProcess(ctx context.Context) {
 			orderNumber := orderNumbers[0]
 
 			err = uc.updateOrderAccruals(ctx, orderNumber)
-			if err != nil {
+			if err == nil {
 				if len(orderNumbers) == 1 {
 					orderNumbers = make([]string, 0)
 					continue
@@ -53,16 +89,17 @@ func (uc *OrdersUseCase) StartSyncOrdersStatusesProcess(ctx context.Context) {
 
 			uc.log.Error(fmt.Errorf("update accruals %s: %s", orderNumber, err))
 
-			if errors.Is(err, accrualerrors.ErrRateLimit) {
-				tickerDuration *= 2
-				tick.Reset(tickerDuration)
-				uc.log.Info(fmt.Sprintf("increase ticker to %d", tickerDuration/time.Second))
+			var rateLimitErr *accrualerrors.RateLimitError
+			if errors.As(err, &rateLimitErr) {
+				tick.Reset(time.Duration(rateLimitErr.RetryAfter) * time.Second)
+				isErrTick = true
+				uc.log.Info(fmt.Sprintf("reset ticker to %d", rateLimitErr.RetryAfter))
 			}
 		}
 	}
 }
 
-func (uc *OrdersUseCase) updateOrderAccruals(ctx context.Context, number string) error {
+func (uc *AccrualsUseCase) updateOrderAccruals(ctx context.Context, number string) error {
 	err := uc.storage.ChangeOrderStatus(ctx, number, orderstatus.PROCESSING, nil)
 	if err != nil {
 		return err
@@ -84,7 +121,7 @@ func (uc *OrdersUseCase) updateOrderAccruals(ctx context.Context, number string)
 	return nil
 }
 
-func (uc *OrdersUseCase) orderStatusByAccrualStatus(accrualOrder *entities.AccrualOrder) *entities.Order {
+func (uc *AccrualsUseCase) orderStatusByAccrualStatus(accrualOrder *entities.AccrualOrder) *entities.Order {
 	var order entities.Order
 
 	order.Number = accrualOrder.Order

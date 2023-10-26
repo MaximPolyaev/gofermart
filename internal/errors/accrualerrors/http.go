@@ -1,5 +1,9 @@
 package accrualerrors
 
-import "errors"
+type RateLimitError struct {
+	RetryAfter int
+}
 
-var ErrRateLimit = errors.New("count reqs is many: over rate limit app")
+func (e *RateLimitError) Error() string {
+	return "count reqs is many: over rate limit app"
+}

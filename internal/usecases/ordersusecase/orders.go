@@ -10,15 +10,17 @@ import (
 
 type OrdersUseCase struct {
 	storage storage
-	accrual accrual
-	log     logger
 }
 
-func New(storage storage, accrual accrual, log logger) *OrdersUseCase {
+type storage interface {
+	FindUserIDByOrderNumber(ctx context.Context, number string) (int, error)
+	CreateOrder(ctx context.Context, number string, userID int) error
+	FindOrdersByUserID(ctx context.Context, userID int) ([]entities.Order, error)
+}
+
+func New(storage storage) *OrdersUseCase {
 	return &OrdersUseCase{
 		storage: storage,
-		accrual: accrual,
-		log:     log,
 	}
 }
 
