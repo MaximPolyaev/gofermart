@@ -33,7 +33,7 @@ type logger interface {
 type storage interface {
 	FindOrderNumbersToUpdateAccruals(ctx context.Context) ([]string, error)
 	ChangeOrderStatus(ctx context.Context, number string, status orderstatus.OrderStatus, tx *sql.Tx) error
-	SaveOrder(ctx context.Context, order *entities.Order) error
+	UpdateOrder(ctx context.Context, order *entities.Order) error
 }
 
 func New(accrual accrual, storage storage, log logger) *AccrualsUseCase {
@@ -112,7 +112,7 @@ func (uc *AccrualsUseCase) updateOrderAccruals(ctx context.Context, number strin
 
 	order := uc.orderStatusByAccrualStatus(accrualOrder)
 	if order.Status == orderstatus.INVALID || order.Status == orderstatus.PROCESSED {
-		err = uc.storage.SaveOrder(ctx, order)
+		err = uc.storage.UpdateOrder(ctx, order)
 		if err != nil {
 			return err
 		}

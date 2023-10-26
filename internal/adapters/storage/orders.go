@@ -35,17 +35,12 @@ func (s *Storage) CreateOrder(ctx context.Context, number string, userID int) er
 	return err
 }
 
-func (s *Storage) SaveOrder(ctx context.Context, order *entities.Order) error {
+func (s *Storage) UpdateOrder(ctx context.Context, order *entities.Order) error {
 	if order.Accrual == 0 {
 		return s.ChangeOrderStatus(ctx, order.Number, order.Status, nil)
 	}
 
-	orderID, err := s.FindOrderIDByNumber(ctx, order.Number)
-	if err != nil {
-		return err
-	}
-
-	userID, err := s.FindUserIDByOrderNumber(ctx, order.Number)
+	userOrder, err := s.findUserOrderByOrderNumber(ctx, order.Number)
 	if err != nil {
 		return err
 	}
@@ -62,7 +57,7 @@ func (s *Storage) SaveOrder(ctx context.Context, order *entities.Order) error {
 
 	q := `INSERT INTO reg_points_balance (order_id, user_id, points) VALUES ($1, $2, $3)`
 
-	_, err = tx.ExecContext(ctx, q, orderID, userID, order.Accrual)
+	_, err = tx.ExecContext(ctx, q, userOrder.OrderID, userOrder.UserID, order.Accrual)
 	if err != nil {
 		return s.Rollback(tx, err)
 	}
@@ -210,4 +205,17 @@ func (s *Storage) Rollback(tx *sql.Tx, err error) error {
 	}
 
 	return err
+}
+
+func (s *Storage) findUserOrderByOrderNumber(ctx context.Context, number string) (*entities.UserOrder, error) {
+	userOrder := entities.UserOrder{}
+
+	q := `SELECT id, user_id FROM doc_order WHERE number = $1 LIMIT 1`
+
+	err := s.db.QueryRowContext(ctx, q, number).Scan(&userOrder.OrderID, &userOrder.UserID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &userOrder, nil
 }
