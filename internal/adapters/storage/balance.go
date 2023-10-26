@@ -7,23 +7,8 @@ import (
 	"time"
 
 	"github.com/MaximPolyaev/gofermart/internal/entities"
+	"github.com/MaximPolyaev/gofermart/internal/errors/balanceerrors"
 )
-
-func (s *Storage) LockUserWithCreateTx(ctx context.Context, userID int) (*sql.Tx, error) {
-	tx, err := s.db.BeginTx(ctx, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	q := `SELECT id FROM ref_user WHERE id = $1 FOR UPDATE`
-
-	_, err = tx.ExecContext(ctx, q, userID)
-	if err != nil {
-		return nil, s.Rollback(tx, err)
-	}
-
-	return tx, nil
-}
 
 func (s *Storage) FindBalanceByUserID(ctx context.Context, tx *sql.Tx, userID int) (*entities.UserBalance, error) {
 	q := `
@@ -113,12 +98,33 @@ ORDER BY t.created_at
 	return wroteOffs, nil
 }
 
-func (s *Storage) WriteOffWithCommit(ctx context.Context, tx *sql.Tx, orderID int, userID int, points float64) error {
-	q := `INSERT INTO reg_points_balance (order_id, user_id, points) VALUES ($1, $2, $3)`
-
-	_, err := tx.ExecContext(ctx, q, orderID, userID, -1*points)
+func (s *Storage) WriteOff(ctx context.Context, orderID int, userID int, points float64) error {
+	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
-		return s.Rollback(tx, err)
+		return err
+	}
+
+	q := `SELECT id FROM ref_user WHERE id = $1 FOR UPDATE`
+
+	_, err = tx.ExecContext(ctx, q, userID)
+	if err != nil {
+		return s.rollback(tx, err)
+	}
+
+	balance, err := s.FindBalanceByUserID(ctx, tx, userID)
+	if err != nil {
+		return s.rollback(tx, err)
+	}
+
+	if balance.Current <= 0 || balance.Current < points {
+		return s.rollback(tx, balanceerrors.ErrInsufficientFunds)
+	}
+
+	q = `INSERT INTO reg_points_balance (order_id, user_id, points) VALUES ($1, $2, $3)`
+
+	_, err = tx.ExecContext(ctx, q, orderID, userID, -1*points)
+	if err != nil {
+		return s.rollback(tx, err)
 	}
 
 	return tx.Commit()

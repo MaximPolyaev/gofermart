@@ -52,14 +52,14 @@ func (s *Storage) UpdateOrder(ctx context.Context, order *entities.Order) error 
 
 	err = s.ChangeOrderStatus(ctx, order.Number, order.Status, tx)
 	if err != nil {
-		return s.Rollback(tx, err)
+		return s.rollback(tx, err)
 	}
 
 	q := `INSERT INTO reg_points_balance (order_id, user_id, points) VALUES ($1, $2, $3)`
 
 	_, err = tx.ExecContext(ctx, q, userOrder.OrderID, userOrder.UserID, order.Accrual)
 	if err != nil {
-		return s.Rollback(tx, err)
+		return s.rollback(tx, err)
 	}
 
 	err = tx.Commit()
@@ -198,7 +198,7 @@ func (s *Storage) ChangeOrderStatus(
 	return err
 }
 
-func (s *Storage) Rollback(tx *sql.Tx, err error) error {
+func (s *Storage) rollback(tx *sql.Tx, err error) error {
 	txErr := tx.Rollback()
 	if txErr != nil {
 		return txErr
