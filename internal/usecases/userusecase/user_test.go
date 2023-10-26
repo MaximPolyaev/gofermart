@@ -2,10 +2,11 @@ package userusecase
 
 import (
 	"context"
+	"testing"
+
 	"github.com/MaximPolyaev/gofermart/internal/usecases/userusecase/mocks"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestUserUseCase_GetUserIDByLogin(t *testing.T) {
