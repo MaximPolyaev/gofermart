@@ -71,7 +71,7 @@ func (a *AuthUseCase) SignUp(ctx context.Context, payload entities.AuthPayload) 
 		Login:        payload.Login,
 		HashPassword: hashPassword,
 	}); err != nil {
-		return "", nil
+		return "", err
 	}
 
 	return jwt.BuildToken(payload.Login)
