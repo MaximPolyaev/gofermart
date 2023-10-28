@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/MaximPolyaev/gofermart/internal/entities"
-	"github.com/MaximPolyaev/gofermart/internal/errors/balanceerrors"
 )
 
 func (s *Storage) FindBalanceByUserID(ctx context.Context, userID int) (*entities.UserBalance, error) {
@@ -91,7 +90,7 @@ ORDER BY t.created_at
 	return wroteOffs, nil
 }
 
-func (s *Storage) WriteOff(ctx context.Context, orderID int, userID int, points float64) error {
+func (s *Storage) LockUserForUpdateBalance(ctx context.Context, userID int) error {
 	q := `SELECT id FROM ref_user WHERE id = $1 FOR UPDATE`
 
 	_, err := s.trOrDB(ctx).ExecContext(ctx, q, userID)
@@ -99,17 +98,12 @@ func (s *Storage) WriteOff(ctx context.Context, orderID int, userID int, points 
 		return err
 	}
 
-	balance, err := s.FindBalanceByUserID(ctx, userID)
-	if err != nil {
-		return err
-	}
+	return nil
+}
 
-	if balance.Current <= 0 || balance.Current < points {
-		return balanceerrors.ErrInsufficientFunds
-	}
+func (s *Storage) WriteOff(ctx context.Context, orderID int, userID int, points float64) error {
+	q := `INSERT INTO reg_points_balance (order_id, user_id, points) VALUES ($1, $2, $3)`
 
-	q = `INSERT INTO reg_points_balance (order_id, user_id, points) VALUES ($1, $2, $3)`
-
-	_, err = s.trOrDB(ctx).ExecContext(ctx, q, orderID, userID, -1*points)
+	_, err := s.trOrDB(ctx).ExecContext(ctx, q, orderID, userID, -1*points)
 	return err
 }

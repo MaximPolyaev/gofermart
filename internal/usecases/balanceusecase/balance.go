@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/MaximPolyaev/gofermart/internal/entities"
+	"github.com/MaximPolyaev/gofermart/internal/errors/balanceerrors"
 )
 
 type BalanceUseCase struct {
@@ -15,6 +16,7 @@ type BalanceUseCase struct {
 type storage interface {
 	FindBalanceByUserID(ctx context.Context, userID int) (*entities.UserBalance, error)
 	FindOrderIDByNumber(ctx context.Context, number string) (int, error)
+	LockUserForUpdateBalance(ctx context.Context, userID int) error
 	WriteOff(ctx context.Context, orderID int, userID int, points float64) error
 	FindWroteOffs(ctx context.Context, userID int) ([]entities.WroteOff, error)
 }
@@ -46,6 +48,20 @@ func (uc *BalanceUseCase) WriteOff(ctx context.Context, writeOff entities.WriteO
 	}
 
 	return uc.trm.Do(ctx, func(ctx context.Context) error {
+		err := uc.storage.LockUserForUpdateBalance(ctx, userID)
+		if err != nil {
+			return err
+		}
+
+		balance, err := uc.GetBalance(ctx, userID)
+		if err != nil {
+			return err
+		}
+
+		if balance.Current <= 0 || balance.Current < writeOff.Sum {
+			return balanceerrors.ErrInsufficientFunds
+		}
+
 		return uc.storage.WriteOff(ctx, orderID, userID, writeOff.Sum)
 	})
 }

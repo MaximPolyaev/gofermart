@@ -80,6 +80,20 @@ func (mr *MockstorageMockRecorder) FindWroteOffs(ctx, userID interface{}) *gomoc
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FindWroteOffs", reflect.TypeOf((*Mockstorage)(nil).FindWroteOffs), ctx, userID)
 }
 
+// LockUserForUpdateBalance mocks base method.
+func (m *Mockstorage) LockUserForUpdateBalance(ctx context.Context, userID int) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "LockUserForUpdateBalance", ctx, userID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// LockUserForUpdateBalance indicates an expected call of LockUserForUpdateBalance.
+func (mr *MockstorageMockRecorder) LockUserForUpdateBalance(ctx, userID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LockUserForUpdateBalance", reflect.TypeOf((*Mockstorage)(nil).LockUserForUpdateBalance), ctx, userID)
+}
+
 // WriteOff mocks base method.
 func (m *Mockstorage) WriteOff(ctx context.Context, orderID, userID int, points float64) error {
 	m.ctrl.T.Helper()
