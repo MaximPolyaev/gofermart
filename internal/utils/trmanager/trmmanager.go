@@ -5,6 +5,10 @@ import (
 	"database/sql"
 )
 
+type TxKey string
+
+const DefaultTxKey = TxKey("txKey")
+
 type TransactionManager struct {
 	db *sql.DB
 }
@@ -19,7 +23,7 @@ func (t *TransactionManager) Do(ctx context.Context, fn func(ctx context.Context
 		return err
 	}
 
-	err = fn(context.WithValue(ctx, "tx", tx))
+	err = fn(context.WithValue(ctx, DefaultTxKey, tx))
 	if err != nil {
 		txerr := tx.Rollback()
 		if txerr != nil {

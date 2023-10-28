@@ -3,6 +3,8 @@ package storage
 import (
 	"context"
 	"database/sql"
+
+	"github.com/MaximPolyaev/gofermart/internal/utils/trmanager"
 )
 
 type conn interface {
@@ -19,8 +21,8 @@ type conn interface {
 	QueryRow(query string, args ...interface{}) *sql.Row
 }
 
-func (s *Storage) trOrDb(ctx context.Context) conn {
-	txByCtx := ctx.Value("tx")
+func (s *Storage) trOrDB(ctx context.Context) conn {
+	txByCtx := ctx.Value(trmanager.DefaultTxKey)
 
 	if txByCtx == nil {
 		return s.db

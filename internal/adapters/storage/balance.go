@@ -20,7 +20,7 @@ WHERE t.user_id = $1
 	var current sql.NullFloat64
 	var withdrawn sql.NullFloat64
 
-	err := s.trOrDb(ctx).QueryRowContext(ctx, q, userID).Scan(&current, &withdrawn)
+	err := s.trOrDB(ctx).QueryRowContext(ctx, q, userID).Scan(&current, &withdrawn)
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -50,7 +50,7 @@ WHERE o.user_id = $1 and t.points < 0
 ORDER BY t.created_at
 `
 
-	rows, err := s.trOrDb(ctx).QueryContext(ctx, q, userID)
+	rows, err := s.trOrDB(ctx).QueryContext(ctx, q, userID)
 	defer func() {
 		if rows != nil {
 			err := rows.Close()
@@ -94,7 +94,7 @@ ORDER BY t.created_at
 func (s *Storage) WriteOff(ctx context.Context, orderID int, userID int, points float64) error {
 	q := `SELECT id FROM ref_user WHERE id = $1 FOR UPDATE`
 
-	_, err := s.trOrDb(ctx).ExecContext(ctx, q, userID)
+	_, err := s.trOrDB(ctx).ExecContext(ctx, q, userID)
 	if err != nil {
 		return err
 	}
@@ -110,6 +110,6 @@ func (s *Storage) WriteOff(ctx context.Context, orderID int, userID int, points 
 
 	q = `INSERT INTO reg_points_balance (order_id, user_id, points) VALUES ($1, $2, $3)`
 
-	_, err = s.trOrDb(ctx).ExecContext(ctx, q, orderID, userID, -1*points)
+	_, err = s.trOrDB(ctx).ExecContext(ctx, q, orderID, userID, -1*points)
 	return err
 }

@@ -13,7 +13,7 @@ func (s *Storage) FindUserWithPassword(ctx context.Context, login string) (*enti
 
 	q := `SELECT login, password FROM ref_user WHERE login = $1 LIMIT 1`
 
-	err := s.trOrDb(ctx).QueryRowContext(ctx, q, login).Scan(&user.Login, &user.HashPassword)
+	err := s.trOrDB(ctx).QueryRowContext(ctx, q, login).Scan(&user.Login, &user.HashPassword)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil
@@ -31,7 +31,7 @@ func (s *Storage) CreateUser(ctx context.Context, user *entities.UserWithPasswor
 		VALUES ($1, $2)
 	`
 
-	if _, err := s.trOrDb(ctx).ExecContext(ctx, q, user.Login, user.HashPassword); err != nil {
+	if _, err := s.trOrDB(ctx).ExecContext(ctx, q, user.Login, user.HashPassword); err != nil {
 		return err
 	}
 

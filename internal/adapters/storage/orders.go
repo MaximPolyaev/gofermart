@@ -15,7 +15,7 @@ func (s *Storage) FindUserIDByOrderNumber(ctx context.Context, number string) (i
 
 	q := `SELECT user_id FROM doc_order WHERE number = $1 LIMIT 1`
 
-	err := s.trOrDb(ctx).QueryRowContext(ctx, q, number).Scan(&userID)
+	err := s.trOrDB(ctx).QueryRowContext(ctx, q, number).Scan(&userID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return 0, nil
@@ -30,7 +30,7 @@ func (s *Storage) FindUserIDByOrderNumber(ctx context.Context, number string) (i
 func (s *Storage) CreateOrder(ctx context.Context, number string, userID int) error {
 	q := `INSERT INTO doc_order (number, user_id) VALUES ($1, $2)`
 
-	_, err := s.trOrDb(ctx).ExecContext(ctx, q, number, userID)
+	_, err := s.trOrDB(ctx).ExecContext(ctx, q, number, userID)
 
 	return err
 }
@@ -52,7 +52,7 @@ func (s *Storage) UpdateOrder(ctx context.Context, order *entities.Order) error 
 
 	q := `INSERT INTO reg_points_balance (order_id, user_id, points) VALUES ($1, $2, $3)`
 
-	_, err = s.trOrDb(ctx).ExecContext(ctx, q, userOrder.OrderID, userOrder.UserID, order.Accrual)
+	_, err = s.trOrDB(ctx).ExecContext(ctx, q, userOrder.OrderID, userOrder.UserID, order.Accrual)
 	if err != nil {
 		return err
 	}
@@ -73,7 +73,7 @@ WHERE t.user_id = $1
 ORDER BY t.created_at
 `
 
-	rows, err := s.trOrDb(ctx).QueryContext(ctx, q, userID)
+	rows, err := s.trOrDB(ctx).QueryContext(ctx, q, userID)
 	defer func() {
 		if rows != nil {
 			err := rows.Close()
@@ -120,7 +120,7 @@ func (s *Storage) FindOrderIDByNumber(ctx context.Context, number string) (int, 
 
 	q := `SELECT id FROM doc_order WHERE number = $1 LIMIT 1`
 
-	err := s.trOrDb(ctx).QueryRowContext(ctx, q, number).Scan(&id)
+	err := s.trOrDB(ctx).QueryRowContext(ctx, q, number).Scan(&id)
 	if err != nil {
 		return 0, err
 	}
@@ -136,7 +136,7 @@ WHERE status IN ($1, $2)
 LIMIT 30
 `
 
-	rows, err := s.trOrDb(ctx).QueryContext(ctx, q, orderstatus.NEW, orderstatus.PROCESSING)
+	rows, err := s.trOrDB(ctx).QueryContext(ctx, q, orderstatus.NEW, orderstatus.PROCESSING)
 	defer func() {
 		if rows != nil {
 			err := rows.Close()
@@ -176,7 +176,7 @@ func (s *Storage) ChangeOrderStatus(
 ) error {
 	q := `UPDATE doc_order SET status = $1, changed_at = now() WHERE number = $2`
 
-	_, err := s.trOrDb(ctx).ExecContext(ctx, q, status, number)
+	_, err := s.trOrDB(ctx).ExecContext(ctx, q, status, number)
 
 	return err
 }
@@ -186,7 +186,7 @@ func (s *Storage) findUserOrderByOrderNumber(ctx context.Context, number string)
 
 	q := `SELECT id, user_id FROM doc_order WHERE number = $1 LIMIT 1`
 
-	err := s.trOrDb(ctx).QueryRowContext(ctx, q, number).Scan(&userOrder.OrderID, &userOrder.UserID)
+	err := s.trOrDB(ctx).QueryRowContext(ctx, q, number).Scan(&userOrder.OrderID, &userOrder.UserID)
 	if err != nil {
 		return nil, err
 	}
