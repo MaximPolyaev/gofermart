@@ -15,7 +15,7 @@ func (s *Storage) FindUserIDByOrderNumber(ctx context.Context, number string) (i
 
 	q := `SELECT user_id FROM doc_order WHERE number = $1 LIMIT 1`
 
-	err := s.db.QueryRowContext(ctx, q, number).Scan(&userID)
+	err := s.trOrDb(ctx).QueryRowContext(ctx, q, number).Scan(&userID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return 0, nil
@@ -30,14 +30,14 @@ func (s *Storage) FindUserIDByOrderNumber(ctx context.Context, number string) (i
 func (s *Storage) CreateOrder(ctx context.Context, number string, userID int) error {
 	q := `INSERT INTO doc_order (number, user_id) VALUES ($1, $2)`
 
-	_, err := s.db.ExecContext(ctx, q, number, userID)
+	_, err := s.trOrDb(ctx).ExecContext(ctx, q, number, userID)
 
 	return err
 }
 
 func (s *Storage) UpdateOrder(ctx context.Context, order *entities.Order) error {
 	if order.Accrual == 0 {
-		return s.ChangeOrderStatus(ctx, order.Number, order.Status, nil)
+		return s.ChangeOrderStatus(ctx, order.Number, order.Status)
 	}
 
 	userOrder, err := s.findUserOrderByOrderNumber(ctx, order.Number)
@@ -45,24 +45,14 @@ func (s *Storage) UpdateOrder(ctx context.Context, order *entities.Order) error 
 		return err
 	}
 
-	tx, err := s.db.BeginTx(ctx, nil)
+	err = s.ChangeOrderStatus(ctx, order.Number, order.Status)
 	if err != nil {
 		return err
 	}
 
-	err = s.ChangeOrderStatus(ctx, order.Number, order.Status, tx)
-	if err != nil {
-		return s.rollback(tx, err)
-	}
-
 	q := `INSERT INTO reg_points_balance (order_id, user_id, points) VALUES ($1, $2, $3)`
 
-	_, err = tx.ExecContext(ctx, q, userOrder.OrderID, userOrder.UserID, order.Accrual)
-	if err != nil {
-		return s.rollback(tx, err)
-	}
-
-	err = tx.Commit()
+	_, err = s.trOrDb(ctx).ExecContext(ctx, q, userOrder.OrderID, userOrder.UserID, order.Accrual)
 	if err != nil {
 		return err
 	}
@@ -83,7 +73,7 @@ WHERE t.user_id = $1
 ORDER BY t.created_at
 `
 
-	rows, err := s.db.QueryContext(ctx, q, userID)
+	rows, err := s.trOrDb(ctx).QueryContext(ctx, q, userID)
 	defer func() {
 		if rows != nil {
 			err := rows.Close()
@@ -130,7 +120,7 @@ func (s *Storage) FindOrderIDByNumber(ctx context.Context, number string) (int, 
 
 	q := `SELECT id FROM doc_order WHERE number = $1 LIMIT 1`
 
-	err := s.db.QueryRowContext(ctx, q, number).Scan(&id)
+	err := s.trOrDb(ctx).QueryRowContext(ctx, q, number).Scan(&id)
 	if err != nil {
 		return 0, err
 	}
@@ -146,7 +136,7 @@ WHERE status IN ($1, $2)
 LIMIT 30
 `
 
-	rows, err := s.db.QueryContext(ctx, q, orderstatus.NEW, orderstatus.PROCESSING)
+	rows, err := s.trOrDb(ctx).QueryContext(ctx, q, orderstatus.NEW, orderstatus.PROCESSING)
 	defer func() {
 		if rows != nil {
 			err := rows.Close()
@@ -183,26 +173,10 @@ func (s *Storage) ChangeOrderStatus(
 	ctx context.Context,
 	number string,
 	status orderstatus.OrderStatus,
-	tx *sql.Tx,
 ) error {
 	q := `UPDATE doc_order SET status = $1, changed_at = now() WHERE number = $2`
 
-	var err error
-
-	if tx != nil {
-		_, err = tx.ExecContext(ctx, q, status, number)
-	} else {
-		_, err = s.db.ExecContext(ctx, q, status, number)
-	}
-
-	return err
-}
-
-func (s *Storage) rollback(tx *sql.Tx, err error) error {
-	txErr := tx.Rollback()
-	if txErr != nil {
-		return txErr
-	}
+	_, err := s.trOrDb(ctx).ExecContext(ctx, q, status, number)
 
 	return err
 }
@@ -212,7 +186,7 @@ func (s *Storage) findUserOrderByOrderNumber(ctx context.Context, number string)
 
 	q := `SELECT id, user_id FROM doc_order WHERE number = $1 LIMIT 1`
 
-	err := s.db.QueryRowContext(ctx, q, number).Scan(&userOrder.OrderID, &userOrder.UserID)
+	err := s.trOrDb(ctx).QueryRowContext(ctx, q, number).Scan(&userOrder.OrderID, &userOrder.UserID)
 	if err != nil {
 		return nil, err
 	}

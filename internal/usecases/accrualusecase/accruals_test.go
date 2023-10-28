@@ -101,7 +101,6 @@ func TestAccrualsUseCase_StartSyncOrdersStatusesProcess(t *testing.T) {
 				ctx,
 				tt.orderNumber,
 				orderstatus.PROCESSING,
-				nil,
 			).AnyTimes()
 
 			if tt.updateOrder != nil {

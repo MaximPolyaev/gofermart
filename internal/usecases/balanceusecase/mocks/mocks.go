@@ -6,7 +6,6 @@ package mocks
 
 import (
 	context "context"
-	sql "database/sql"
 	reflect "reflect"
 
 	entities "github.com/MaximPolyaev/gofermart/internal/entities"
@@ -37,18 +36,18 @@ func (m *Mockstorage) EXPECT() *MockstorageMockRecorder {
 }
 
 // FindBalanceByUserID mocks base method.
-func (m *Mockstorage) FindBalanceByUserID(ctx context.Context, tx *sql.Tx, userID int) (*entities.UserBalance, error) {
+func (m *Mockstorage) FindBalanceByUserID(ctx context.Context, userID int) (*entities.UserBalance, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "FindBalanceByUserID", ctx, tx, userID)
+	ret := m.ctrl.Call(m, "FindBalanceByUserID", ctx, userID)
 	ret0, _ := ret[0].(*entities.UserBalance)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // FindBalanceByUserID indicates an expected call of FindBalanceByUserID.
-func (mr *MockstorageMockRecorder) FindBalanceByUserID(ctx, tx, userID interface{}) *gomock.Call {
+func (mr *MockstorageMockRecorder) FindBalanceByUserID(ctx, userID interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FindBalanceByUserID", reflect.TypeOf((*Mockstorage)(nil).FindBalanceByUserID), ctx, tx, userID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FindBalanceByUserID", reflect.TypeOf((*Mockstorage)(nil).FindBalanceByUserID), ctx, userID)
 }
 
 // FindOrderIDByNumber mocks base method.
@@ -93,6 +92,43 @@ func (m *Mockstorage) WriteOff(ctx context.Context, orderID, userID int, points 
 func (mr *MockstorageMockRecorder) WriteOff(ctx, orderID, userID, points interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WriteOff", reflect.TypeOf((*Mockstorage)(nil).WriteOff), ctx, orderID, userID, points)
+}
+
+// MocktransactionManager is a mock of transactionManager interface.
+type MocktransactionManager struct {
+	ctrl     *gomock.Controller
+	recorder *MocktransactionManagerMockRecorder
+}
+
+// MocktransactionManagerMockRecorder is the mock recorder for MocktransactionManager.
+type MocktransactionManagerMockRecorder struct {
+	mock *MocktransactionManager
+}
+
+// NewMocktransactionManager creates a new mock instance.
+func NewMocktransactionManager(ctrl *gomock.Controller) *MocktransactionManager {
+	mock := &MocktransactionManager{ctrl: ctrl}
+	mock.recorder = &MocktransactionManagerMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MocktransactionManager) EXPECT() *MocktransactionManagerMockRecorder {
+	return m.recorder
+}
+
+// Do mocks base method.
+func (m *MocktransactionManager) Do(ctx context.Context, fn func(context.Context) error) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Do", ctx, fn)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Do indicates an expected call of Do.
+func (mr *MocktransactionManagerMockRecorder) Do(ctx, fn interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Do", reflect.TypeOf((*MocktransactionManager)(nil).Do), ctx, fn)
 }
 
 // Mocklogger is a mock of logger interface.

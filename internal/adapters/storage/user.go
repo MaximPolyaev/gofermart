@@ -11,7 +11,7 @@ func (s *Storage) FindUserIDByLogin(ctx context.Context, login string) (int, err
 
 	q := `SELECT id FROM ref_user WHERE login = $1 LIMIT 1`
 
-	err := s.db.QueryRowContext(ctx, q, login).Scan(&id)
+	err := s.trOrDb(ctx).QueryRowContext(ctx, q, login).Scan(&id)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return 0, nil

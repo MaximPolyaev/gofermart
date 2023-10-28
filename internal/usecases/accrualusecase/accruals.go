@@ -2,7 +2,6 @@ package accrualusecase
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 	"fmt"
 	"time"
@@ -32,7 +31,7 @@ type logger interface {
 
 type storage interface {
 	FindOrderNumbersToUpdateAccruals(ctx context.Context) ([]string, error)
-	ChangeOrderStatus(ctx context.Context, number string, status orderstatus.OrderStatus, tx *sql.Tx) error
+	ChangeOrderStatus(ctx context.Context, number string, status orderstatus.OrderStatus) error
 	UpdateOrder(ctx context.Context, order *entities.Order) error
 }
 
@@ -100,7 +99,7 @@ func (uc *AccrualsUseCase) StartSyncOrdersStatusesProcess(ctx context.Context) {
 }
 
 func (uc *AccrualsUseCase) updateOrderAccruals(ctx context.Context, number string) error {
-	err := uc.storage.ChangeOrderStatus(ctx, number, orderstatus.PROCESSING, nil)
+	err := uc.storage.ChangeOrderStatus(ctx, number, orderstatus.PROCESSING)
 	if err != nil {
 		return err
 	}

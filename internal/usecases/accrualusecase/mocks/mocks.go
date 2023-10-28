@@ -6,7 +6,6 @@ package mocks
 
 import (
 	context "context"
-	sql "database/sql"
 	reflect "reflect"
 
 	entities "github.com/MaximPolyaev/gofermart/internal/entities"
@@ -131,17 +130,17 @@ func (m *Mockstorage) EXPECT() *MockstorageMockRecorder {
 }
 
 // ChangeOrderStatus mocks base method.
-func (m *Mockstorage) ChangeOrderStatus(ctx context.Context, number string, status orderstatus.OrderStatus, tx *sql.Tx) error {
+func (m *Mockstorage) ChangeOrderStatus(ctx context.Context, number string, status orderstatus.OrderStatus) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ChangeOrderStatus", ctx, number, status, tx)
+	ret := m.ctrl.Call(m, "ChangeOrderStatus", ctx, number, status)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // ChangeOrderStatus indicates an expected call of ChangeOrderStatus.
-func (mr *MockstorageMockRecorder) ChangeOrderStatus(ctx, number, status, tx interface{}) *gomock.Call {
+func (mr *MockstorageMockRecorder) ChangeOrderStatus(ctx, number, status interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ChangeOrderStatus", reflect.TypeOf((*Mockstorage)(nil).ChangeOrderStatus), ctx, number, status, tx)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ChangeOrderStatus", reflect.TypeOf((*Mockstorage)(nil).ChangeOrderStatus), ctx, number, status)
 }
 
 // FindOrderNumbersToUpdateAccruals mocks base method.

@@ -2,32 +2,41 @@ package balanceusecase
 
 import (
 	"context"
-	"database/sql"
+
 	"github.com/MaximPolyaev/gofermart/internal/entities"
 )
 
 type BalanceUseCase struct {
 	storage storage
+	trm     transactionManager
 	log     logger
 }
 
 type storage interface {
-	FindBalanceByUserID(ctx context.Context, tx *sql.Tx, userID int) (*entities.UserBalance, error)
+	FindBalanceByUserID(ctx context.Context, userID int) (*entities.UserBalance, error)
 	FindOrderIDByNumber(ctx context.Context, number string) (int, error)
 	WriteOff(ctx context.Context, orderID int, userID int, points float64) error
 	FindWroteOffs(ctx context.Context, userID int) ([]entities.WroteOff, error)
+}
+
+type transactionManager interface {
+	Do(ctx context.Context, fn func(ctx context.Context) error) error
 }
 
 type logger interface {
 	Error(args ...interface{})
 }
 
-func New(storage storage, log logger) *BalanceUseCase {
-	return &BalanceUseCase{storage: storage, log: log}
+func New(storage storage, trm transactionManager, log logger) *BalanceUseCase {
+	return &BalanceUseCase{
+		storage: storage,
+		trm:     trm,
+		log:     log,
+	}
 }
 
 func (uc *BalanceUseCase) GetBalance(ctx context.Context, userID int) (*entities.UserBalance, error) {
-	return uc.storage.FindBalanceByUserID(ctx, nil, userID)
+	return uc.storage.FindBalanceByUserID(ctx, userID)
 }
 
 func (uc *BalanceUseCase) WriteOff(ctx context.Context, writeOff entities.WriteOff, userID int) error {
@@ -36,7 +45,9 @@ func (uc *BalanceUseCase) WriteOff(ctx context.Context, writeOff entities.WriteO
 		return err
 	}
 
-	return uc.storage.WriteOff(ctx, orderID, userID, writeOff.Sum)
+	return uc.trm.Do(ctx, func(ctx context.Context) error {
+		return uc.storage.WriteOff(ctx, orderID, userID, writeOff.Sum)
+	})
 }
 
 func (uc *BalanceUseCase) GetWroteOffs(ctx context.Context, userID int) ([]entities.WroteOff, error) {

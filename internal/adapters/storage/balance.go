@@ -10,7 +10,7 @@ import (
 	"github.com/MaximPolyaev/gofermart/internal/errors/balanceerrors"
 )
 
-func (s *Storage) FindBalanceByUserID(ctx context.Context, tx *sql.Tx, userID int) (*entities.UserBalance, error) {
+func (s *Storage) FindBalanceByUserID(ctx context.Context, userID int) (*entities.UserBalance, error) {
 	q := `
 SELECT sum(t.points) as current, sum(case when t.points < 0 then -1 * t.points else 0 end) as withdrawn
 FROM reg_points_balance t
@@ -19,15 +19,8 @@ WHERE t.user_id = $1
 	var balance entities.UserBalance
 	var current sql.NullFloat64
 	var withdrawn sql.NullFloat64
-	var row *sql.Row
 
-	if tx == nil {
-		row = s.db.QueryRowContext(ctx, q, userID)
-	} else {
-		row = tx.QueryRowContext(ctx, q, userID)
-	}
-
-	err := row.Scan(&current, &withdrawn)
+	err := s.trOrDb(ctx).QueryRowContext(ctx, q, userID).Scan(&current, &withdrawn)
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -57,7 +50,7 @@ WHERE o.user_id = $1 and t.points < 0
 ORDER BY t.created_at
 `
 
-	rows, err := s.db.QueryContext(ctx, q, userID)
+	rows, err := s.trOrDb(ctx).QueryContext(ctx, q, userID)
 	defer func() {
 		if rows != nil {
 			err := rows.Close()
@@ -99,33 +92,24 @@ ORDER BY t.created_at
 }
 
 func (s *Storage) WriteOff(ctx context.Context, orderID int, userID int, points float64) error {
-	tx, err := s.db.BeginTx(ctx, nil)
+	q := `SELECT id FROM ref_user WHERE id = $1 FOR UPDATE`
+
+	_, err := s.trOrDb(ctx).ExecContext(ctx, q, userID)
 	if err != nil {
 		return err
 	}
 
-	q := `SELECT id FROM ref_user WHERE id = $1 FOR UPDATE`
-
-	_, err = tx.ExecContext(ctx, q, userID)
+	balance, err := s.FindBalanceByUserID(ctx, userID)
 	if err != nil {
-		return s.rollback(tx, err)
-	}
-
-	balance, err := s.FindBalanceByUserID(ctx, tx, userID)
-	if err != nil {
-		return s.rollback(tx, err)
+		return err
 	}
 
 	if balance.Current <= 0 || balance.Current < points {
-		return s.rollback(tx, balanceerrors.ErrInsufficientFunds)
+		return balanceerrors.ErrInsufficientFunds
 	}
 
 	q = `INSERT INTO reg_points_balance (order_id, user_id, points) VALUES ($1, $2, $3)`
 
-	_, err = tx.ExecContext(ctx, q, orderID, userID, -1*points)
-	if err != nil {
-		return s.rollback(tx, err)
-	}
-
-	return tx.Commit()
+	_, err = s.trOrDb(ctx).ExecContext(ctx, q, orderID, userID, -1*points)
+	return err
 }
