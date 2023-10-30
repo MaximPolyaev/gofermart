@@ -1,0 +1,1 @@
+DROP TABLE reg_points_balance
