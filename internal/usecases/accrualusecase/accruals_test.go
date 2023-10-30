@@ -2,6 +2,8 @@ package accrualusecase
 
 import (
 	"context"
+	"errors"
+	"github.com/MaximPolyaev/gofermart/internal/errors/accrualerrors"
 	"testing"
 	"time"
 
@@ -113,4 +115,37 @@ func TestAccrualsUseCase_StartSyncOrdersStatusesProcess(t *testing.T) {
 			uc.StartSyncOrdersStatusesProcess(ctx)
 		})
 	}
+}
+
+func TestAccrualsUseCase_StartSyncOrdersStatusesProcess_RateLimit(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
+	defer cancel()
+
+	orderNumber := "1"
+
+	accrual := mocks.NewMockaccrual(ctrl)
+	accrual.EXPECT().FetchAccrualOrder(ctx, orderNumber).Return(
+		nil,
+		&accrualerrors.RateLimitError{
+			RetryAfter: 5,
+		},
+	)
+
+	storage := mocks.NewMockstorage(ctrl)
+	storage.EXPECT().FindOrderNumbersToUpdateAccruals(ctx).Return([]string{orderNumber}, nil).AnyTimes()
+	storage.EXPECT().ChangeOrderStatus(
+		ctx,
+		orderNumber,
+		orderstatus.PROCESSING,
+	).AnyTimes()
+
+	log := mocks.NewMocklogger(ctrl)
+	log.EXPECT().Error(errors.New("update accruals 1: count reqs is many: over rate limit app"))
+	log.EXPECT().Info("reset ticker to 5")
+
+	uc := New(accrual, storage, log)
+	uc.StartSyncOrdersStatusesProcess(ctx)
 }
